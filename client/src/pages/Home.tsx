@@ -1,9 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { getLoginUrl } from "@/const";
 import { Loader2, LayoutDashboard, CheckSquare, Kanban } from "lucide-react";
 import { useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -32,7 +31,7 @@ export default function Home() {
           <span className="font-bold text-lg text-foreground">TaskFlow</span>
         </div>
         <Button asChild>
-          <a href={getLoginUrl()}>Sign in</a>
+          <Link href="/login">Sign in</Link>
         </Button>
       </header>
 
@@ -55,7 +54,10 @@ export default function Home() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button size="lg" asChild>
-            <a href={getLoginUrl()}>Get started free</a>
+            <Link href="/register">Get started free</Link>
+          </Button>
+          <Button size="lg" variant="outline" asChild>
+            <Link href="/login">Sign in</Link>
           </Button>
         </div>
 

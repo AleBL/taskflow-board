@@ -19,12 +19,69 @@ function getDbPath(): string {
 }
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _dbPath: string | null = null;
 
 export function getDb() {
+  const currentPath = getDbPath();
+  // Reset connection if path changed (e.g., test environment sets :memory:)
+  if (_db && _dbPath !== currentPath) {
+    _db = null;
+  }
   if (!_db) {
-    const sqlite = new Database(getDbPath());
-    sqlite.pragma("journal_mode = WAL");
+    _dbPath = currentPath;
+    const sqlite = new Database(currentPath);
+    if (currentPath !== ":memory:") {
+      sqlite.pragma("journal_mode = WAL");
+    }
     sqlite.pragma("foreign_keys = ON");
+    // For in-memory databases, run schema inline
+    if (currentPath === ":memory:") {
+      sqlite.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          openId TEXT NOT NULL UNIQUE,
+          name TEXT,
+          email TEXT UNIQUE,
+          passwordHash TEXT,
+          loginMethod TEXT,
+          role TEXT NOT NULL DEFAULT 'user',
+          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        );
+        CREATE TABLE IF NOT EXISTS projects (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          description TEXT,
+          color TEXT NOT NULL DEFAULT '#6366f1',
+          ownerId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        );
+        CREATE TABLE IF NOT EXISTS tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'todo',
+          priority TEXT NOT NULL DEFAULT 'medium',
+          dueDate INTEGER,
+          completedAt INTEGER,
+          position REAL NOT NULL DEFAULT 0,
+          projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+          assigneeId INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        );
+        CREATE TABLE IF NOT EXISTS comments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          content TEXT NOT NULL,
+          taskId INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          authorId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+        );
+      `);
+    }
     _db = drizzle(sqlite);
   }
   return _db;
@@ -75,6 +132,42 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = getDb();
   return db.select().from(users).where(eq(users.openId, openId)).get() ?? undefined;
+}
+
+export function getUserById(id: number) {
+  const db = getDb();
+  return db.select().from(users).where(eq(users.id, id)).get() ?? null;
+}
+
+export function getUserByEmail(email: string) {
+  const db = getDb();
+  return db.select().from(users).where(eq(users.email, email)).get() ?? null;
+}
+
+export function createLocalUser(data: {
+  name: string;
+  email: string;
+  passwordHash: string;
+}) {
+  const db = getDb();
+  const now = new Date();
+  // openId for local users is derived from email to satisfy NOT NULL constraint
+  const openId = `local:${data.email}`;
+  return db
+    .insert(users)
+    .values({
+      openId,
+      name: data.name,
+      email: data.email,
+      passwordHash: data.passwordHash,
+      loginMethod: "local",
+      role: "user",
+      createdAt: now,
+      updatedAt: now,
+      lastSignedIn: now,
+    })
+    .returning()
+    .get()!;
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────

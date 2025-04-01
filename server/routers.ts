@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import {
   getProjectsByOwner,
   getProjectById,
@@ -19,7 +20,10 @@ import {
   createComment,
   deleteComment,
   getDashboardMetrics,
+  getUserByEmail,
+  createLocalUser,
 } from "./db";
+import { hashPassword, verifyPassword, signSession } from "./auth";
 
 // ─── Projects Router ──────────────────────────────────────────────────────────
 
@@ -222,6 +226,69 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+
+    register: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(2).max(100),
+          email: z.string().email(),
+          password: z.string().min(8).max(128),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const existing = getUserByEmail(input.email);
+        if (existing) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Email already in use",
+          });
+        }
+        const passwordHash = await hashPassword(input.password);
+        const user = createLocalUser({
+          name: input.name,
+          email: input.email,
+          passwordHash,
+        });
+        const token = await signSession(user.id);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 365 * 24 * 60 * 60 * 1000,
+        });
+        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+      }),
+
+    login: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email(),
+          password: z.string().min(1),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const user = getUserByEmail(input.email);
+        if (!user || !user.passwordHash) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+        const valid = await verifyPassword(input.password, user.passwordHash);
+        if (!valid) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid email or password",
+          });
+        }
+        const token = await signSession(user.id);
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, {
+          ...cookieOptions,
+          maxAge: 365 * 24 * 60 * 60 * 1000,
+        });
+        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });

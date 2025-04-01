@@ -12,7 +12,8 @@ export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   openId: text("openId").notNull().unique(),
   name: text("name"),
-  email: text("email"),
+  email: text("email").unique(),
+  passwordHash: text("passwordHash"),
   loginMethod: text("loginMethod"),
   role: text("role", { enum: ["user", "admin"] }).notNull().default("user"),
   createdAt: integer("createdAt", { mode: "timestamp_ms" })

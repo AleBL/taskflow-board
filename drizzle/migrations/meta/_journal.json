@@ -8,6 +8,13 @@
       "when": 1774365979869,
       "tag": "0000_wakeful_expediter",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1774367534877,
+      "tag": "0001_deep_hellion",
+      "breakpoints": true
     }
   ]
 }
