@@ -34,14 +34,14 @@
 - [x] README.md with setup, tech stack, and deployment notes
 
 ## Local Authentication (replacing OAuth)
-- [ ] Add passwordHash column to users table and migrate
-- [ ] Install bcryptjs + @types/bcryptjs
-- [ ] Implement auth.register tRPC procedure
-- [ ] Implement auth.login tRPC procedure (bcrypt verify + JWT)
-- [ ] Implement auth.me and auth.logout procedures
-- [ ] Remove all OAuth/Manus references from server
-- [ ] Create Login page (email + password form)
-- [ ] Create Register page
-- [ ] Update useAuth hook to use local auth
-- [ ] Protect routes: redirect to /login if not authenticated
-- [ ] Write tests for register and login
+- [x] Add passwordHash column to users table and migrate
+- [x] Install bcryptjs + @types/bcryptjs
+- [x] Implement auth.register tRPC procedure
+- [x] Implement auth.login tRPC procedure (bcrypt verify + JWT)
+- [x] Implement auth.me and auth.logout procedures
+- [x] Remove all OAuth/Manus references from server
+- [x] Create Login page (email + password form)
+- [x] Create Register page
+- [x] Update useAuth hook to use local auth
+- [x] Protect routes: redirect to /login if not authenticated
+- [x] Write tests for register and login
