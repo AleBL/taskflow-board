@@ -11,8 +11,15 @@ import fs from "fs";
 
 function getDbPath(): string {
   const raw = process.env.DATABASE_URL ?? "";
+  // Accept :memory: for tests
+  if (raw === ":memory:") return ":memory:";
+  // Accept explicit SQLite file paths (file: prefix or relative/absolute .db paths)
   if (raw.startsWith("file:")) return raw.replace("file:", "");
-  if (raw) return raw;
+  if (raw.endsWith(".db") || raw.endsWith(".sqlite") || raw.endsWith(".sqlite3")) return raw;
+  // Use a dedicated env var for SQLite path when DATABASE_URL points to MySQL/Postgres
+  const sqlitePath = process.env.SQLITE_PATH;
+  if (sqlitePath) return sqlitePath;
+  // Default: create data/ directory next to cwd and use taskflow.db
   const dir = path.join(process.cwd(), "data");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return path.join(dir, "taskflow.db");

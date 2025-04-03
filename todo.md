@@ -45,3 +45,6 @@
 - [x] Update useAuth hook to use local auth
 - [x] Protect routes: redirect to /login if not authenticated
 - [x] Write tests for register and login
+
+## Bug Fixes
+- [x] Fix "Cannot open database because the directory does not exist" on register/login
