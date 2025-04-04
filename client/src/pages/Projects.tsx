@@ -29,6 +29,7 @@ import {
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const PROJECT_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
@@ -49,6 +50,7 @@ const defaultForm: ProjectForm = {
 };
 
 export default function Projects() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
@@ -64,7 +66,7 @@ export default function Projects() {
       utils.dashboard.metrics.invalidate();
       setDialogOpen(false);
       setForm(defaultForm);
-      toast.success("Project created");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -75,7 +77,7 @@ export default function Projects() {
       setDialogOpen(false);
       setEditingId(null);
       setForm(defaultForm);
-      toast.success("Project updated");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -84,7 +86,7 @@ export default function Projects() {
     onSuccess: () => {
       utils.projects.list.invalidate();
       utils.dashboard.metrics.invalidate();
-      toast.success("Project deleted");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -123,14 +125,14 @@ export default function Projects() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Projects</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t("projects.title")}</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Manage your projects and Kanban boards
+              {t("projects.subtitle")}
             </p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
-            New Project
+            {t("projects.newProject")}
           </Button>
         </div>
 
@@ -144,14 +146,14 @@ export default function Projects() {
             <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-4">
               <FolderKanban className="h-12 w-12 text-muted-foreground" />
               <div>
-                <p className="font-semibold text-foreground">No projects yet</p>
+                <p className="font-semibold text-foreground">{t("projects.noProjects")}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Create your first project to start organizing tasks
+                  {t("projects.createFirstProject")}
                 </p>
               </div>
               <Button onClick={openCreate}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Project
+                {t("projects.newProject")}
               </Button>
             </CardContent>
           </Card>
@@ -193,7 +195,7 @@ export default function Projects() {
                           }}
                         >
                           <Pencil className="h-4 w-4 mr-2" />
-                          Edit
+                          {t("common.edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -203,7 +205,7 @@ export default function Projects() {
                           }}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
+                          {t("common.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -211,7 +213,7 @@ export default function Projects() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground line-clamp-2">
-                    {project.description || "No description"}
+                    {project.description || t("common.none")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-3">
                     Created {new Date(project.createdAt).toLocaleDateString()}
@@ -228,34 +230,34 @@ export default function Projects() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? "Edit Project" : "Create Project"}
+              {editingId ? t("projects.editProject") : t("projects.newProject")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t("projects.projectName")} *</Label>
               <Input
                 id="name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="My awesome project"
+                placeholder={t("projects.namePlaceholder")}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t("projects.projectDescription")}</Label>
               <Textarea
                 id="description"
                 value={form.description}
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                placeholder="What is this project about?"
+                placeholder={t("projects.descriptionPlaceholder")}
                 rows={3}
               />
             </div>
             <div className="space-y-2">
-              <Label>Color</Label>
+              <Label>{t("projects.projectColor")}</Label>
               <div className="flex gap-2 flex-wrap">
                 {PROJECT_COLORS.map((color) => (
                   <button
@@ -278,11 +280,11 @@ export default function Projects() {
                 variant="outline"
                 onClick={() => setDialogOpen(false)}
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {editingId ? "Save Changes" : "Create Project"}
+                {editingId ? t("common.save") : t("projects.newProject")}
               </Button>
             </DialogFooter>
           </form>

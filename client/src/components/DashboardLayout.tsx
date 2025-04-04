@@ -26,12 +26,8 @@ import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
-
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: FolderKanban, label: "Projects", path: "/projects" },
-  { icon: Search, label: "Search Tasks", path: "/tasks" },
-];
+import { LanguageSwitcher } from "./LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -107,12 +103,18 @@ function DashboardLayoutContent({
   children,
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const menuItems = [
+    { icon: LayoutDashboard, label: t("nav.dashboard"), path: "/dashboard" },
+    { icon: FolderKanban, label: t("nav.projects"), path: "/projects" },
+    { icon: Search, label: t("nav.search"), path: "/tasks" },
+  ];
   const activeMenuItem = menuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
@@ -227,7 +229,7 @@ function DashboardLayoutContent({
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
+                  <span>{t("nav.signOut")}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -256,6 +258,12 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <LanguageSwitcher />
+          </div>
+        )}
+        {!isMobile && (
+          <div className="flex justify-end px-4 pt-3">
+            <LanguageSwitcher />
           </div>
         )}
         <main className="flex-1 p-4">{children}</main>

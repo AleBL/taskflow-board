@@ -22,13 +22,15 @@ import { ArrowLeft, Loader2, Plus } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 type Status = "todo" | "in_progress" | "done";
 
-const COLUMNS: { id: Status; label: string; color: string }[] = [
-  { id: "todo", label: "To Do", color: "bg-slate-500" },
-  { id: "in_progress", label: "In Progress", color: "bg-amber-500" },
-  { id: "done", label: "Done", color: "bg-emerald-500" },
+// Labels are set dynamically via i18n in the component
+const COLUMNS: { id: Status; labelKey: string; color: string }[] = [
+  { id: "todo", labelKey: "tasks.statusTodo", color: "bg-slate-500" },
+  { id: "in_progress", labelKey: "tasks.statusInProgress", color: "bg-amber-500" },
+  { id: "done", labelKey: "tasks.statusDone", color: "bg-emerald-500" },
 ];
 
 function KanbanColumn({
@@ -38,12 +40,13 @@ function KanbanColumn({
   onEditTask,
   onDeleteTask,
 }: {
-  column: (typeof COLUMNS)[0];
+  column: (typeof COLUMNS)[0] & { label: string };
   tasks: Task[];
   onAddTask: (status: Status) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col bg-muted/40 rounded-xl min-w-[280px] w-[280px] shrink-0">
       {/* Column header */}
@@ -88,7 +91,7 @@ function KanbanColumn({
             className="flex items-center justify-center h-20 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors"
             onClick={() => onAddTask(column.id)}
           >
-            <p className="text-xs text-muted-foreground">Drop here or click</p>
+            <p className="text-xs text-muted-foreground">{t("tasks.dropHere")}</p>
           </div>
         )}
       </div>
@@ -97,6 +100,7 @@ function KanbanColumn({
 }
 
 export default function ProjectDetail() {
+  const { t } = useTranslation();
   const params = useParams<{ id: string }>();
   const projectId = parseInt(params.id ?? "0", 10);
   const [, navigate] = useLocation();
@@ -120,7 +124,7 @@ export default function ProjectDetail() {
     onSuccess: () => {
       utils.tasks.listByProject.invalidate({ projectId });
       utils.dashboard.metrics.invalidate();
-      toast.success("Task deleted");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -226,13 +230,13 @@ export default function ProjectDetail() {
     return (
       <DashboardLayout>
         <div className="text-center py-20">
-          <p className="text-muted-foreground">Project not found.</p>
+          <p className="text-muted-foreground">{t("projects.notFound")}</p>
           <Button
             variant="ghost"
             className="mt-4"
             onClick={() => navigate("/projects")}
           >
-            Back to Projects
+            {t("projects.backToProjects")}
           </Button>
         </div>
       </DashboardLayout>
@@ -272,7 +276,7 @@ export default function ProjectDetail() {
             onClick={() => openCreateModal("todo")}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Task
+            {t("tasks.addTask")}
           </Button>
         </div>
 
@@ -289,7 +293,7 @@ export default function ProjectDetail() {
               {COLUMNS.map((col) => (
                 <KanbanColumn
                   key={col.id}
-                  column={col}
+                  column={{ ...col, label: t(col.labelKey) }}
                   tasks={tasksByStatus[col.id]}
                   onAddTask={openCreateModal}
                   onEditTask={openEditModal}

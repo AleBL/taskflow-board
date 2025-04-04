@@ -2,13 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { trpc } from "@/lib/trpc";
 import { Loader2, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export default function Register() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
@@ -30,11 +33,11 @@ export default function Register() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
-      toast.error("Passwords do not match");
+      toast.error(t("auth.passwordMismatch"));
       return;
     }
     if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+      toast.error(t("auth.passwordTooShort"));
       return;
     }
     registerMutation.mutate({ name, email, password });
@@ -42,6 +45,11 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      {/* Language switcher top-right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
+
       <div className="w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 text-center">
@@ -51,19 +59,19 @@ export default function Register() {
             </div>
             <span className="text-2xl font-bold text-foreground">TaskFlow</span>
           </div>
-          <p className="text-sm text-muted-foreground">Create your account</p>
+          <p className="text-sm text-muted-foreground">{t("auth.fillDetails")}</p>
         </div>
 
         {/* Form */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Get started</CardTitle>
-            <CardDescription>Fill in the details below to create your account</CardDescription>
+            <CardTitle className="text-lg">{t("auth.getStarted")}</CardTitle>
+            <CardDescription>{t("auth.fillDetails")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">{t("common.fullName")}</Label>
                 <Input
                   id="name"
                   type="text"
@@ -77,11 +85,11 @@ export default function Register() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("common.email")}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t("auth.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -89,11 +97,11 @@ export default function Register() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("common.password")}</Label>
                 <Input
                   id="password"
                   type="password"
-                  placeholder="Min. 8 characters"
+                  placeholder={t("auth.passwordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -102,11 +110,11 @@ export default function Register() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="confirm">Confirm Password</Label>
+                <Label htmlFor="confirm">{t("common.confirmPassword")}</Label>
                 <Input
                   id="confirm"
                   type="password"
-                  placeholder="Repeat your password"
+                  placeholder={t("auth.repeatPassword")}
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   required
@@ -121,16 +129,16 @@ export default function Register() {
                 {registerMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : null}
-                Create Account
+                {t("auth.createAccount")}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t("auth.alreadyHaveAccount")}{" "}
           <Link href="/login" className="text-primary hover:underline font-medium">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </div>

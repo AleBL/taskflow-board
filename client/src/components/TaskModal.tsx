@@ -21,6 +21,7 @@ import { Loader2, Send, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "./TaskCard";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   open: boolean;
@@ -46,6 +47,7 @@ const defaultForm: TaskForm = {
 };
 
 export function TaskModal({ open, onClose, projectId, task }: Props) {
+  const { t } = useTranslation();
   const utils = trpc.useUtils();
 
   const [form, setForm] = useState<TaskForm>(() =>
@@ -74,7 +76,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
       utils.tasks.listByProject.invalidate({ projectId });
       utils.dashboard.metrics.invalidate();
       onClose();
-      toast.success("Task created");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -83,7 +85,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
     onSuccess: () => {
       utils.tasks.listByProject.invalidate({ projectId });
       onClose();
-      toast.success("Task updated");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -134,35 +136,35 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{task ? "Edit Task" : "Create Task"}</DialogTitle>
+          <DialogTitle>{task ? t("tasks.editTask") : t("tasks.createTask")}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title">Title *</Label>
+            <Label htmlFor="task-title">{t("tasks.taskTitle")} *</Label>
             <Input
               id="task-title"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Task title"
+              placeholder={t("tasks.taskTitlePlaceholder")}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="task-desc">Description</Label>
+            <Label htmlFor="task-desc">{t("projects.projectDescription")}</Label>
             <Textarea
               id="task-desc"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Optional description..."
+              placeholder={t("tasks.descriptionPlaceholder")}
               rows={3}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t("tasks.status")}</Label>
               <Select
                 value={form.status}
                 onValueChange={(v) =>
@@ -173,15 +175,15 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
+                  <SelectItem value="todo">{t("tasks.statusTodo")}</SelectItem>
+                  <SelectItem value="in_progress">{t("tasks.statusInProgress")}</SelectItem>
+                  <SelectItem value="done">{t("tasks.statusDone")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label>Priority</Label>
+              <Label>{t("tasks.priority")}</Label>
               <Select
                 value={form.priority}
                 onValueChange={(v) =>
@@ -192,16 +194,16 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="low">{t("tasks.priorityLow")}</SelectItem>
+                  <SelectItem value="medium">{t("tasks.priorityMedium")}</SelectItem>
+                  <SelectItem value="high">{t("tasks.priorityHigh")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="due-date">Due Date</Label>
+            <Label htmlFor="due-date">{t("tasks.dueDate")}</Label>
             <Input
               id="due-date"
               type="date"
@@ -212,11 +214,11 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={isPending}>
               {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {task ? "Save Changes" : "Create Task"}
+              {task ? t("common.save") : t("tasks.createTask")}
             </Button>
           </DialogFooter>
         </form>
@@ -225,7 +227,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
         {task && (
           <div className="border-t border-border pt-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">
-              Comments ({comments?.length ?? 0})
+              {t("tasks.comments")} ({comments?.length ?? 0})
             </h3>
 
             <div className="space-y-3 max-h-48 overflow-y-auto">
@@ -255,7 +257,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
               ))}
               {comments?.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-2">
-                  No comments yet
+                  {t("tasks.noComments")}
                 </p>
               )}
             </div>
@@ -264,7 +266,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
               <Input
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Add a comment..."
+                placeholder={t("tasks.addComment")}
                 className="flex-1"
               />
               <Button

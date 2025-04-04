@@ -2,6 +2,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
+import { useTranslation } from "react-i18next";
 import {
   CheckSquare,
   Clock,
@@ -47,6 +48,7 @@ function MetricCard({
 }
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
@@ -57,14 +59,14 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Overview of your projects and tasks
+              {t("dashboard.subtitle")}
             </p>
           </div>
           <Button onClick={() => navigate("/projects")}>
             <Plus className="h-4 w-4 mr-2" />
-            New Project
+            {t("projects.newProject")}
           </Button>
         </div>
 
@@ -76,39 +78,34 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <MetricCard
-              title="Total Projects"
+              title={t("projects.title")}
               value={metrics?.totalProjects ?? 0}
               icon={FolderKanban}
               color="bg-violet-500"
-              description="Active projects"
             />
             <MetricCard
-              title="Total Tasks"
+              title={t("dashboard.totalTasks")}
               value={metrics?.total ?? 0}
               icon={ListTodo}
               color="bg-blue-500"
-              description="Across all projects"
             />
             <MetricCard
-              title="To Do"
+              title={t("dashboard.todo")}
               value={metrics?.todo ?? 0}
               icon={ListTodo}
               color="bg-slate-500"
-              description="Not started yet"
             />
             <MetricCard
-              title="In Progress"
+              title={t("dashboard.inProgress")}
               value={metrics?.inProgress ?? 0}
               icon={Clock}
               color="bg-amber-500"
-              description="Currently active"
             />
             <MetricCard
-              title="Done"
+              title={t("dashboard.done")}
               value={metrics?.done ?? 0}
               icon={CheckSquare}
               color="bg-emerald-500"
-              description="Completed tasks"
             />
           </div>
         )}
@@ -120,11 +117,10 @@ export default function Dashboard() {
               <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
               <div>
                 <p className="font-medium text-foreground">
-                  {metrics?.overdue} overdue{" "}
-                  {metrics?.overdue === 1 ? "task" : "tasks"}
+                  {metrics?.overdue} {t("dashboard.overdue").toLowerCase()}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  These tasks have passed their due date and are not yet done.
+                  {t("tasks.adjustFilters")}
                 </p>
               </div>
               <Button
@@ -133,8 +129,8 @@ export default function Dashboard() {
                 className="ml-auto"
                 onClick={() => navigate("/tasks?status=overdue")}
               >
-                View tasks
-              </Button>
+              {t("projects.viewBoard")}
+            </Button>
             </CardContent>
           </Card>
         )}
@@ -143,14 +139,14 @@ export default function Dashboard() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">
-              Recent Projects
+              {t("projects.title")}
             </h2>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate("/projects")}
             >
-              View all
+              {t("common.all")}
             </Button>
           </div>
 
@@ -159,14 +155,14 @@ export default function Dashboard() {
               <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-4">
                 <FolderKanban className="h-10 w-10 text-muted-foreground" />
                 <div>
-                  <p className="font-medium text-foreground">No projects yet</p>
+                  <p className="font-medium text-foreground">{t("projects.noProjects")}</p>
                   <p className="text-sm text-muted-foreground">
-                    Create your first project to get started
+                    {t("projects.createFirstProject")}
                   </p>
                 </div>
                 <Button onClick={() => navigate("/projects")}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Project
+                  {t("projects.newProject")}
                 </Button>
               </CardContent>
             </Card>
@@ -191,7 +187,7 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground line-clamp-2">
-                      {project.description || "No description"}
+                      {project.description || t("common.none")}
                     </p>
                   </CardContent>
                 </Card>

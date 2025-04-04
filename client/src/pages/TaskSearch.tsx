@@ -27,6 +27,7 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "@/components/TaskCard";
+import { useTranslation } from "react-i18next";
 
 const STATUS_CONFIG = {
   todo: { label: "To Do", icon: Circle, color: "text-slate-500" },
@@ -41,6 +42,7 @@ const PRIORITY_CONFIG = {
 };
 
 export default function TaskSearch() {
+  const { t } = useTranslation();
   const utils = trpc.useUtils();
 
   const [search, setSearch] = useState("");
@@ -76,7 +78,7 @@ export default function TaskSearch() {
     onSuccess: () => {
       utils.tasks.search.invalidate();
       utils.dashboard.metrics.invalidate();
-      toast.success("Task deleted");
+      toast.success(t("common.success"));
     },
     onError: (e) => toast.error(e.message),
   });
@@ -102,9 +104,9 @@ export default function TaskSearch() {
       <div className="space-y-5">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Search Tasks</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("tasks.searchTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Find and filter tasks across all your projects
+            {t("tasks.searchSubtitle")}
           </p>
         </div>
 
@@ -115,7 +117,7 @@ export default function TaskSearch() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by title..."
+              placeholder={t("tasks.searchPlaceholder")}
               className="pl-9"
             />
           </div>
@@ -125,10 +127,10 @@ export default function TaskSearch() {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="todo">To Do</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="done">Done</SelectItem>
+              <SelectItem value="all">{t("tasks.allStatuses")}</SelectItem>
+              <SelectItem value="todo">{t("tasks.statusTodo")}</SelectItem>
+              <SelectItem value="in_progress">{t("tasks.statusInProgress")}</SelectItem>
+              <SelectItem value="done">{t("tasks.statusDone")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -137,10 +139,10 @@ export default function TaskSearch() {
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All priorities</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="all">{t("tasks.allPriorities")}</SelectItem>
+              <SelectItem value="low">{t("tasks.priorityLow")}</SelectItem>
+              <SelectItem value="medium">{t("tasks.priorityMedium")}</SelectItem>
+              <SelectItem value="high">{t("tasks.priorityHigh")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -149,7 +151,7 @@ export default function TaskSearch() {
               <SelectValue placeholder="Project" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All projects</SelectItem>
+              <SelectItem value="all">{t("tasks.allProjects")}</SelectItem>
               {projects?.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)}>
                   {p.name}
@@ -174,18 +176,18 @@ export default function TaskSearch() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-3">
               <Search className="h-10 w-10 text-muted-foreground" />
-              <p className="font-medium text-foreground">No tasks found</p>
+              <p className="font-medium text-foreground">{t("tasks.noTasksFound")}</p>
               <p className="text-sm text-muted-foreground">
                 {hasFilters
-                  ? "Try adjusting your filters"
-                  : "Create tasks in your projects to see them here"}
+                  ? t("tasks.adjustFilters")
+                  : t("tasks.createTasksHint")}
               </p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""} found
+              {tasks.length} {t("tasks.tasksFound")}
             </p>
             {tasks.map((task) => {
               const statusCfg = STATUS_CONFIG[task.status as keyof typeof STATUS_CONFIG];
@@ -216,7 +218,7 @@ export default function TaskSearch() {
                         {isOverdue && (
                           <span className="inline-flex items-center gap-1 text-xs text-destructive font-medium">
                             <AlertTriangle className="h-3 w-3" />
-                            Overdue
+                            {t("dashboard.overdue")}
                           </span>
                         )}
                       </div>
