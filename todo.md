@@ -48,3 +48,20 @@
 
 ## Bug Fixes
 - [x] Fix "Cannot open database because the directory does not exist" on register/login
+
+## Internationalization (i18n)
+- [x] Install i18next + react-i18next + i18next-browser-languagedetector
+- [x] Create translation files: en.json and pt-BR.json
+- [x] Configure i18n provider in main.tsx
+- [x] Add language switcher component (EN/PT-BR)
+- [x] Translate all pages: Login, Register, Home, Dashboard, Projects, ProjectDetail, TaskSearch
+- [x] Translate DashboardLayout sidebar and header
+- [x] Translate TaskModal and TaskCard components
+
+## Vercel Deploy
+- [x] Create vercel.json with build and route config
+- [x] Create api/index.ts serverless entry point
+- [x] Update package.json scripts for Vercel
+- [x] Create env.example with required variables
+- [x] Create DEPLOY.md with step-by-step Vercel instructions
+- [x] Export project as ZIP for user import
