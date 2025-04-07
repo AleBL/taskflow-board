@@ -1,47 +1,91 @@
-import Database from "better-sqlite3";
-import fs from "fs";
-import path from "path";
+/**
+ * Database migration script for Turso (libSQL).
+ * Reads TURSO_DATABASE_URL and TURSO_AUTH_TOKEN from environment.
+ *
+ * Usage:
+ *   pnpm db:migrate
+ */
+import { createClient } from "@libsql/client";
+import { readFileSync, readdirSync } from "fs";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import "dotenv/config";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbDir = path.join(__dirname, "..", "data");
-const dbPath = path.join(dbDir, "taskflow.db");
-const migrationPath = path.join(__dirname, "..", "drizzle", "migrations", "0000_wakeful_expediter.sql");
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+const url = process.env.TURSO_DATABASE_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!url) {
+  console.error("❌  TURSO_DATABASE_URL is not set.");
+  console.error("    Set it in your .env file or environment variables.");
+  process.exit(1);
 }
 
-const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+console.log(`🔗  Connecting to: ${url}`);
 
-const sql = fs.readFileSync(migrationPath, "utf8");
-const statements = sql
-  .split("--> statement-breakpoint")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const client = createClient({ url, authToken });
 
-let applied = 0;
-for (const stmt of statements) {
-  try {
-    db.exec(stmt);
-    applied++;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("already exists")) {
-      console.log(`  [skip] Table already exists`);
-    } else {
-      console.error(`  [error] ${msg}`);
-    }
+// Read all migration SQL files in order
+const migrationsDir = join(__dirname, "../drizzle/migrations");
+const files = readdirSync(migrationsDir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
+
+if (files.length === 0) {
+  console.log("⚠️   No migration files found. Run `pnpm drizzle-kit generate` first.");
+  process.exit(0);
+}
+
+console.log(`📂  Found ${files.length} migration file(s):`);
+for (const file of files) {
+  console.log(`    - ${file}`);
+}
+
+// Create migrations tracking table
+await client.execute(`
+  CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  )
+`);
+
+// Apply each migration if not already applied
+for (const file of files) {
+  const hash = file.replace(".sql", "");
+
+  const existing = await client.execute({
+    sql: "SELECT id FROM __drizzle_migrations WHERE hash = ?",
+    args: [hash],
+  });
+
+  if (existing.rows.length > 0) {
+    console.log(`⏭️   Skipping (already applied): ${file}`);
+    continue;
   }
+
+  const sql = readFileSync(join(migrationsDir, file), "utf-8");
+
+  // Split on statement boundaries and execute each
+  const statements = sql
+    .split("--> statement-breakpoint")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  console.log(`⚡  Applying: ${file} (${statements.length} statement(s))`);
+
+  for (const statement of statements) {
+    await client.execute(statement);
+  }
+
+  await client.execute({
+    sql: "INSERT INTO __drizzle_migrations (hash) VALUES (?)",
+    args: [hash],
+  });
+
+  console.log(`✅  Applied: ${file}`);
 }
 
-const tables = db
-  .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-  .all()
-  .map((r) => r.name);
-
-console.log(`Migration complete. Applied ${applied} statements.`);
-console.log(`Tables: ${tables.join(", ")}`);
-db.close();
+console.log("\n🎉  All migrations applied successfully!");
+await client.close();

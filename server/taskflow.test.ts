@@ -1,66 +1,72 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { describe, it, expect, beforeEach } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { users, projects, tasks, comments } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 // ─── In-memory DB setup ───────────────────────────────────────────────────────
 
-function createTestDb() {
-  const sqlite = new Database(":memory:");
-  sqlite.pragma("foreign_keys = ON");
-  sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      openId TEXT NOT NULL UNIQUE,
-      name TEXT,
-      email TEXT UNIQUE,
-      passwordHash TEXT,
-      loginMethod TEXT,
-      role TEXT NOT NULL DEFAULT 'user',
-      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    );
-    CREATE TABLE IF NOT EXISTS projects (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      description TEXT,
-      color TEXT NOT NULL DEFAULT '#6366f1',
-      ownerId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    );
-    CREATE TABLE IF NOT EXISTS tasks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      description TEXT,
-      status TEXT NOT NULL DEFAULT 'todo',
-      priority TEXT NOT NULL DEFAULT 'medium',
-      dueDate INTEGER,
-      completedAt INTEGER,
-      position REAL NOT NULL DEFAULT 0,
-      projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-      assigneeId INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    );
-    CREATE TABLE IF NOT EXISTS comments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      content TEXT NOT NULL,
-      taskId INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-      authorId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    );
-  `);
-  return drizzle(sqlite);
+const SCHEMA_SQL = `
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    openId TEXT NOT NULL UNIQUE,
+    name TEXT,
+    email TEXT UNIQUE,
+    passwordHash TEXT,
+    loginMethod TEXT,
+    role TEXT NOT NULL DEFAULT 'user',
+    createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  );
+  CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    color TEXT NOT NULL DEFAULT '#6366f1',
+    ownerId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  );
+  CREATE TABLE IF NOT EXISTS tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'todo',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    dueDate INTEGER,
+    completedAt INTEGER,
+    position REAL NOT NULL DEFAULT 0,
+    projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    assigneeId INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  );
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    content TEXT NOT NULL,
+    taskId INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    authorId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  );
+`;
+
+async function createTestDb() {
+  const client = createClient({ url: ":memory:" });
+  // Execute each statement separately
+  for (const stmt of SCHEMA_SQL.split(";").map((s) => s.trim()).filter(Boolean)) {
+    await client.execute(stmt);
+  }
+  return drizzle(client);
 }
+
+type TestDb = Awaited<ReturnType<typeof createTestDb>>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function seedUser(db: ReturnType<typeof drizzle>, openId = "user-1") {
-  return db
+async function seedUser(db: TestDb, openId = "user-1") {
+  const result = await db
     .insert(users)
     .values({
       openId,
@@ -71,16 +77,12 @@ function seedUser(db: ReturnType<typeof drizzle>, openId = "user-1") {
       updatedAt: new Date(),
       lastSignedIn: new Date(),
     })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
-function seedProject(
-  db: ReturnType<typeof drizzle>,
-  ownerId: number,
-  name = "Test Project"
-) {
-  return db
+async function seedProject(db: TestDb, ownerId: number, name = "Test Project") {
+  const result = await db
     .insert(projects)
     .values({
       name,
@@ -90,16 +92,16 @@ function seedProject(
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
-function seedTask(
-  db: ReturnType<typeof drizzle>,
+async function seedTask(
+  db: TestDb,
   projectId: number,
   overrides: Partial<{ title: string; status: string; priority: string }> = {}
 ) {
-  return db
+  const result = await db
     .insert(tasks)
     .values({
       title: overrides.title ?? "Test Task",
@@ -110,35 +112,35 @@ function seedTask(
       createdAt: new Date(),
       updatedAt: new Date(),
     })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Users", () => {
-  it("inserts and retrieves a user by openId", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
+  it("inserts and retrieves a user by openId", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
     expect(user.openId).toBe("user-1");
     expect(user.name).toBe("Test User");
     expect(user.role).toBe("user");
   });
 
-  it("enforces unique openId constraint", () => {
-    const db = createTestDb();
-    seedUser(db, "unique-id");
-    expect(() => seedUser(db, "unique-id")).toThrow();
+  it("enforces unique openId constraint", async () => {
+    const db = await createTestDb();
+    await seedUser(db, "unique-id");
+    await expect(seedUser(db, "unique-id")).rejects.toThrow();
   });
 });
 
 describe("Projects", () => {
-  it("creates a project and retrieves it by owner", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
+  it("creates a project and retrieves it by owner", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    await seedProject(db, user.id);
 
-    const found = db
+    const found = await db
       .select()
       .from(projects)
       .where(eq(projects.ownerId, user.id))
@@ -149,15 +151,15 @@ describe("Projects", () => {
     expect(found[0].color).toBe("#6366f1");
   });
 
-  it("deletes a project and cascades to tasks", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    seedTask(db, project.id);
+  it("deletes a project and cascades to tasks", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    await seedTask(db, project.id);
 
-    db.delete(projects).where(eq(projects.id, project.id)).run();
+    await db.delete(projects).where(eq(projects.id, project.id));
 
-    const remainingTasks = db
+    const remainingTasks = await db
       .select()
       .from(tasks)
       .where(eq(tasks.projectId, project.id))
@@ -166,14 +168,14 @@ describe("Projects", () => {
     expect(remainingTasks).toHaveLength(0);
   });
 
-  it("does not return projects from other users", () => {
-    const db = createTestDb();
-    const user1 = seedUser(db, "user-1");
-    const user2 = seedUser(db, "user-2");
-    seedProject(db, user1.id, "User1 Project");
-    seedProject(db, user2.id, "User2 Project");
+  it("does not return projects from other users", async () => {
+    const db = await createTestDb();
+    const user1 = await seedUser(db, "user-1");
+    const user2 = await seedUser(db, "user-2");
+    await seedProject(db, user1.id, "User1 Project");
+    await seedProject(db, user2.id, "User2 Project");
 
-    const user1Projects = db
+    const user1Projects = await db
       .select()
       .from(projects)
       .where(eq(projects.ownerId, user1.id))
@@ -185,27 +187,27 @@ describe("Projects", () => {
 });
 
 describe("Tasks", () => {
-  it("creates a task with default status and priority", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    const task = seedTask(db, project.id);
+  it("creates a task with default status and priority", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task = await seedTask(db, project.id);
 
     expect(task.status).toBe("todo");
     expect(task.priority).toBe("medium");
     expect(task.position).toBe(0);
   });
 
-  it("creates tasks with different statuses", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
+  it("creates tasks with different statuses", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
 
-    seedTask(db, project.id, { status: "todo" });
-    seedTask(db, project.id, { status: "in_progress" });
-    seedTask(db, project.id, { status: "done" });
+    await seedTask(db, project.id, { status: "todo" });
+    await seedTask(db, project.id, { status: "in_progress" });
+    await seedTask(db, project.id, { status: "done" });
 
-    const all = db
+    const all = await db
       .select()
       .from(tasks)
       .where(eq(tasks.projectId, project.id))
@@ -218,53 +220,51 @@ describe("Tasks", () => {
     expect(statuses).toContain("done");
   });
 
-  it("updates task status", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    const task = seedTask(db, project.id);
+  it("updates task status", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task = await seedTask(db, project.id);
 
-    db.update(tasks)
+    await db
+      .update(tasks)
       .set({ status: "done", completedAt: new Date() })
-      .where(eq(tasks.id, task.id))
-      .run();
+      .where(eq(tasks.id, task.id));
 
-    const updated = db.select().from(tasks).where(eq(tasks.id, task.id)).get()!;
-    expect(updated.status).toBe("done");
-    expect(updated.completedAt).not.toBeNull();
+    const updated = await db.select().from(tasks).where(eq(tasks.id, task.id)).get();
+    expect(updated!.status).toBe("done");
+    expect(updated!.completedAt).not.toBeNull();
   });
 
-  it("deletes a task", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    const task = seedTask(db, project.id);
+  it("deletes a task", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task = await seedTask(db, project.id);
 
-    db.delete(tasks).where(eq(tasks.id, task.id)).run();
+    await db.delete(tasks).where(eq(tasks.id, task.id));
 
-    const found = db.select().from(tasks).where(eq(tasks.id, task.id)).get();
+    const found = await db.select().from(tasks).where(eq(tasks.id, task.id)).get();
     expect(found).toBeUndefined();
   });
 });
 
 describe("Comments", () => {
-  it("creates and retrieves a comment", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    const task = seedTask(db, project.id);
+  it("creates and retrieves a comment", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task = await seedTask(db, project.id);
 
-    db.insert(comments)
-      .values({
-        content: "This is a comment",
-        taskId: task.id,
-        authorId: user.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .run();
+    await db.insert(comments).values({
+      content: "This is a comment",
+      taskId: task.id,
+      authorId: user.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    const found = db
+    const found = await db
       .select()
       .from(comments)
       .where(eq(comments.taskId, task.id))
@@ -274,25 +274,23 @@ describe("Comments", () => {
     expect(found[0].content).toBe("This is a comment");
   });
 
-  it("cascades comment deletion when task is deleted", () => {
-    const db = createTestDb();
-    const user = seedUser(db);
-    const project = seedProject(db, user.id);
-    const task = seedTask(db, project.id);
+  it("cascades comment deletion when task is deleted", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task = await seedTask(db, project.id);
 
-    db.insert(comments)
-      .values({
-        content: "Will be deleted",
-        taskId: task.id,
-        authorId: user.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .run();
+    await db.insert(comments).values({
+      content: "Comment to be deleted",
+      taskId: task.id,
+      authorId: user.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    db.delete(tasks).where(eq(tasks.id, task.id)).run();
+    await db.delete(tasks).where(eq(tasks.id, task.id));
 
-    const remaining = db
+    const remaining = await db
       .select()
       .from(comments)
       .where(eq(comments.taskId, task.id))
@@ -300,45 +298,38 @@ describe("Comments", () => {
 
     expect(remaining).toHaveLength(0);
   });
-});
 
-describe("auth.logout", () => {
-  it("clears the session cookie and reports success", async () => {
-    const { appRouter } = await import("./routers");
-    const { COOKIE_NAME } = await import("../shared/const");
-    type TrpcContext = import("./_core/context").TrpcContext;
+  it("does not delete comments from other tasks", async () => {
+    const db = await createTestDb();
+    const user = await seedUser(db);
+    const project = await seedProject(db, user.id);
+    const task1 = await seedTask(db, project.id, { title: "Task 1" });
+    const task2 = await seedTask(db, project.id, { title: "Task 2" });
 
-    const clearedCookies: { name: string; options: Record<string, unknown> }[] = [];
-
-    const user: NonNullable<TrpcContext["user"]> = {
-      id: 1,
-      openId: "sample-user",
-      email: "sample@example.com",
-      passwordHash: null,
-      name: "Sample User",
-      loginMethod: "local",
-      role: "user",
+    await db.insert(comments).values({
+      content: "Comment on task 1",
+      taskId: task1.id,
+      authorId: user.id,
       createdAt: new Date(),
       updatedAt: new Date(),
-      lastSignedIn: new Date(),
-    };
+    });
+    await db.insert(comments).values({
+      content: "Comment on task 2",
+      taskId: task2.id,
+      authorId: user.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    const ctx: TrpcContext = {
-      user,
-      req: { protocol: "https", headers: {} } as TrpcContext["req"],
-      res: {
-        clearCookie: (name: string, options: Record<string, unknown>) => {
-          clearedCookies.push({ name, options });
-        },
-      } as TrpcContext["res"],
-    };
+    await db.delete(tasks).where(eq(tasks.id, task1.id));
 
-    const caller = appRouter.createCaller(ctx);
-    const result = await caller.auth.logout();
+    const task2Comments = await db
+      .select()
+      .from(comments)
+      .where(eq(comments.taskId, task2.id))
+      .all();
 
-    expect(result).toEqual({ success: true });
-    expect(clearedCookies).toHaveLength(1);
-    expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
-    expect(clearedCookies[0]?.options).toMatchObject({ maxAge: -1 });
+    expect(task2Comments).toHaveLength(1);
+    expect(task2Comments[0].content).toBe("Comment on task 2");
   });
 });

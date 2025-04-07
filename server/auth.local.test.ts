@@ -1,11 +1,43 @@
-import { describe, it, expect, beforeEach } from "vitest";
+/**
+ * Local auth tests — register, login, logout.
+ * Uses an in-memory libSQL database via setDb() injection.
+ */
+
+// Set env FIRST before any module that calls getDb()
+process.env.TURSO_DATABASE_URL = ":memory:";
+delete process.env.TURSO_AUTH_TOKEN;
+
+import { describe, it, expect, beforeAll } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { setDb } from "./db";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
 
-// Use an in-memory SQLite database for tests
-process.env.DATABASE_URL = ":memory:";
+// ─── Bootstrap in-memory schema ───────────────────────────────────────────────
 
-// Dynamically import router AFTER setting env so db.ts picks up :memory:
+const _memClient = createClient({ url: ":memory:" });
+
+beforeAll(async () => {
+  await _memClient.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      openId TEXT NOT NULL UNIQUE,
+      name TEXT,
+      email TEXT UNIQUE,
+      passwordHash TEXT,
+      loginMethod TEXT,
+      role TEXT NOT NULL DEFAULT 'user',
+      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    )
+  `);
+  setDb(drizzle(_memClient));
+});
+
+// Import router AFTER setDb is called in beforeAll
+// (dynamic import ensures module is loaded after env is set)
 const { appRouter } = await import("./routers");
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

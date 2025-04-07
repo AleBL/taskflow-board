@@ -34,9 +34,9 @@ const projectsRouter = router({
 
   getById: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .query(({ ctx, input }) => {
-      const project = getProjectById(input.id, ctx.user.id);
-      if (!project) throw new Error("Project not found");
+    .query(async ({ ctx, input }) => {
+      const project = await getProjectById(input.id, ctx.user.id);
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
       return project;
     }),
 
@@ -66,18 +66,18 @@ const projectsRouter = router({
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
       })
     )
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input;
-      const project = updateProject(id, ctx.user.id, data);
-      if (!project) throw new Error("Project not found");
+      const project = await updateProject(id, ctx.user.id, data);
+      if (!project) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
       return project;
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => {
-      const deleted = deleteProject(input.id, ctx.user.id);
-      if (!deleted) throw new Error("Project not found");
+    .mutation(async ({ ctx, input }) => {
+      const deleted = await deleteProject(input.id, ctx.user.id);
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
       return { success: true };
     }),
 });
@@ -104,9 +104,9 @@ const tasksRouter = router({
 
   getById: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .query(({ input }) => {
-      const task = getTaskById(input.id);
-      if (!task) throw new Error("Task not found");
+    .query(async ({ input }) => {
+      const task = await getTaskById(input.id);
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
       return task;
     }),
 
@@ -144,13 +144,13 @@ const tasksRouter = router({
         position: z.number().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const { id, dueDate, ...rest } = input;
-      const task = updateTask(id, {
+      const task = await updateTask(id, {
         ...rest,
         dueDate: dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : undefined,
       });
-      if (!task) throw new Error("Task not found");
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
       return task;
     }),
 
@@ -162,20 +162,20 @@ const tasksRouter = router({
         position: z.number().optional(),
       })
     )
-    .mutation(({ input }) => {
-      const task = updateTask(input.id, {
+    .mutation(async ({ input }) => {
+      const task = await updateTask(input.id, {
         status: input.status,
         position: input.position,
       });
-      if (!task) throw new Error("Task not found");
+      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
       return task;
     }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ input }) => {
-      const deleted = deleteTask(input.id);
-      if (!deleted) throw new Error("Task not found");
+    .mutation(async ({ input }) => {
+      const deleted = await deleteTask(input.id);
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
       return { success: true };
     }),
 });
@@ -204,9 +204,9 @@ const commentsRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => {
-      const deleted = deleteComment(input.id, ctx.user.id);
-      if (!deleted) throw new Error("Comment not found");
+    .mutation(async ({ ctx, input }) => {
+      const deleted = await deleteComment(input.id, ctx.user.id);
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Comment not found" });
       return { success: true };
     }),
 });
@@ -236,7 +236,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const existing = getUserByEmail(input.email);
+        const existing = await getUserByEmail(input.email);
         if (existing) {
           throw new TRPCError({
             code: "CONFLICT",
@@ -244,7 +244,7 @@ export const appRouter = router({
           });
         }
         const passwordHash = await hashPassword(input.password);
-        const user = createLocalUser({
+        const user = await createLocalUser({
           name: input.name,
           email: input.email,
           passwordHash,
@@ -255,7 +255,10 @@ export const appRouter = router({
           ...cookieOptions,
           maxAge: 365 * 24 * 60 * 60 * 1000,
         });
-        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+        return {
+          success: true,
+          user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        };
       }),
 
     login: publicProcedure
@@ -266,7 +269,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const user = getUserByEmail(input.email);
+        const user = await getUserByEmail(input.email);
         if (!user || !user.passwordHash) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
@@ -286,7 +289,10 @@ export const appRouter = router({
           ...cookieOptions,
           maxAge: 365 * 24 * 60 * 60 * 1000,
         });
-        return { success: true, user: { id: user.id, name: user.name, email: user.email, role: user.role } };
+        return {
+          success: true,
+          user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        };
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {

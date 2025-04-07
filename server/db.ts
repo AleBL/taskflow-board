@@ -1,97 +1,38 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { eq, and, like, desc, asc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client";
+import { eq, and, like, desc, asc, inArray } from "drizzle-orm";
 import { users, projects, tasks, comments } from "../drizzle/schema";
 import type { InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
-import path from "path";
-import fs from "fs";
 
 // ─── Database connection ───────────────────────────────────────────────────────
 
-function getDbPath(): string {
-  const raw = process.env.DATABASE_URL ?? "";
-  // Accept :memory: for tests
-  if (raw === ":memory:") return ":memory:";
-  // Accept explicit SQLite file paths (file: prefix or relative/absolute .db paths)
-  if (raw.startsWith("file:")) return raw.replace("file:", "");
-  if (raw.endsWith(".db") || raw.endsWith(".sqlite") || raw.endsWith(".sqlite3")) return raw;
-  // Use a dedicated env var for SQLite path when DATABASE_URL points to MySQL/Postgres
-  const sqlitePath = process.env.SQLITE_PATH;
-  if (sqlitePath) return sqlitePath;
-  // Default: create data/ directory next to cwd and use taskflow.db
-  const dir = path.join(process.cwd(), "data");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, "taskflow.db");
-}
-
 let _db: ReturnType<typeof drizzle> | null = null;
-let _dbPath: string | null = null;
 
 export function getDb() {
-  const currentPath = getDbPath();
-  // Reset connection if path changed (e.g., test environment sets :memory:)
-  if (_db && _dbPath !== currentPath) {
-    _db = null;
-  }
-  if (!_db) {
-    _dbPath = currentPath;
-    const sqlite = new Database(currentPath);
-    if (currentPath !== ":memory:") {
-      sqlite.pragma("journal_mode = WAL");
-    }
-    sqlite.pragma("foreign_keys = ON");
-    // For in-memory databases, run schema inline
-    if (currentPath === ":memory:") {
-      sqlite.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          openId TEXT NOT NULL UNIQUE,
-          name TEXT,
-          email TEXT UNIQUE,
-          passwordHash TEXT,
-          loginMethod TEXT,
-          role TEXT NOT NULL DEFAULT 'user',
-          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-          lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-        );
-        CREATE TABLE IF NOT EXISTS projects (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          description TEXT,
-          color TEXT NOT NULL DEFAULT '#6366f1',
-          ownerId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-        );
-        CREATE TABLE IF NOT EXISTS tasks (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          title TEXT NOT NULL,
-          description TEXT,
-          status TEXT NOT NULL DEFAULT 'todo',
-          priority TEXT NOT NULL DEFAULT 'medium',
-          dueDate INTEGER,
-          completedAt INTEGER,
-          position REAL NOT NULL DEFAULT 0,
-          projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-          assigneeId INTEGER REFERENCES users(id) ON DELETE SET NULL,
-          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-        );
-        CREATE TABLE IF NOT EXISTS comments (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          content TEXT NOT NULL,
-          taskId INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-          authorId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-          updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-        );
-      `);
-    }
-    _db = drizzle(sqlite);
-  }
+  if (_db) return _db;
+
+  const url = process.env.TURSO_DATABASE_URL ?? ":memory:";
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  const client = createClient(
+    url === ":memory:"
+      ? { url: ":memory:" }
+      : { url, authToken }
+  );
+
+  _db = drizzle(client);
   return _db;
+}
+
+// Reset for tests
+export function resetDb() {
+  _db = null;
+}
+
+// Inject a pre-built db instance (used in tests)
+export function setDb(db: ReturnType<typeof drizzle>) {
+  _db = db;
 }
 
 // ─── Users ────────────────────────────────────────────────────────────────────
@@ -101,14 +42,15 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   const db = getDb();
   const now = new Date();
 
-  const existing = db
+  const existing = await db
     .select()
     .from(users)
     .where(eq(users.openId, user.openId))
     .get();
 
   if (existing) {
-    db.update(users)
+    await db
+      .update(users)
       .set({
         name: user.name ?? existing.name,
         email: user.email ?? existing.email,
@@ -116,51 +58,54 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         lastSignedIn: now,
         updatedAt: now,
       })
-      .where(eq(users.openId, user.openId))
-      .run();
+      .where(eq(users.openId, user.openId));
   } else {
     const role =
       user.openId === ENV.ownerOpenId ? "admin" : (user.role ?? "user");
-    db.insert(users)
-      .values({
-        openId: user.openId,
-        name: user.name ?? null,
-        email: user.email ?? null,
-        loginMethod: user.loginMethod ?? null,
-        role,
-        createdAt: now,
-        updatedAt: now,
-        lastSignedIn: now,
-      })
-      .run();
+    await db.insert(users).values({
+      openId: user.openId,
+      name: user.name ?? null,
+      email: user.email ?? null,
+      loginMethod: user.loginMethod ?? null,
+      role,
+      createdAt: now,
+      updatedAt: now,
+      lastSignedIn: now,
+    });
   }
 }
 
 export async function getUserByOpenId(openId: string) {
   const db = getDb();
-  return db.select().from(users).where(eq(users.openId, openId)).get() ?? undefined;
+  return (
+    (await db.select().from(users).where(eq(users.openId, openId)).get()) ??
+    undefined
+  );
 }
 
-export function getUserById(id: number) {
+export async function getUserById(id: number) {
   const db = getDb();
-  return db.select().from(users).where(eq(users.id, id)).get() ?? null;
+  return (
+    (await db.select().from(users).where(eq(users.id, id)).get()) ?? null
+  );
 }
 
-export function getUserByEmail(email: string) {
+export async function getUserByEmail(email: string) {
   const db = getDb();
-  return db.select().from(users).where(eq(users.email, email)).get() ?? null;
+  return (
+    (await db.select().from(users).where(eq(users.email, email)).get()) ?? null
+  );
 }
 
-export function createLocalUser(data: {
+export async function createLocalUser(data: {
   name: string;
   email: string;
   passwordHash: string;
 }) {
   const db = getDb();
   const now = new Date();
-  // openId for local users is derived from email to satisfy NOT NULL constraint
   const openId = `local:${data.email}`;
-  return db
+  const result = await db
     .insert(users)
     .values({
       openId,
@@ -173,13 +118,13 @@ export function createLocalUser(data: {
       updatedAt: now,
       lastSignedIn: now,
     })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
-export function getProjectsByOwner(ownerId: number) {
+export async function getProjectsByOwner(ownerId: number) {
   const db = getDb();
   return db
     .select()
@@ -189,18 +134,18 @@ export function getProjectsByOwner(ownerId: number) {
     .all();
 }
 
-export function getProjectById(id: number, ownerId: number) {
+export async function getProjectById(id: number, ownerId: number) {
   const db = getDb();
   return (
-    db
+    (await db
       .select()
       .from(projects)
       .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
-      .get() ?? null
+      .get()) ?? null
   );
 }
 
-export function createProject(data: {
+export async function createProject(data: {
   name: string;
   description: string | null;
   color: string;
@@ -208,43 +153,39 @@ export function createProject(data: {
 }) {
   const db = getDb();
   const now = new Date();
-  return db
+  const result = await db
     .insert(projects)
     .values({ ...data, createdAt: now, updatedAt: now })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
-export function updateProject(
+export async function updateProject(
   id: number,
   ownerId: number,
   data: Partial<{ name: string; description: string | null; color: string }>
 ) {
   const db = getDb();
-  return (
-    db
-      .update(projects)
-      .set({ ...data, updatedAt: new Date() })
-      .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
-      .returning()
-      .get() ?? null
-  );
+  const result = await db
+    .update(projects)
+    .set({ ...data, updatedAt: new Date() })
+    .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
+    .returning();
+  return result[0] ?? null;
 }
 
-export function deleteProject(id: number, ownerId: number) {
+export async function deleteProject(id: number, ownerId: number) {
   const db = getDb();
-  return (
-    db
-      .delete(projects)
-      .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
-      .returning()
-      .get() ?? null
-  );
+  const result = await db
+    .delete(projects)
+    .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
+    .returning();
+  return result[0] ?? null;
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
 
-export function getTasksByProject(projectId: number) {
+export async function getTasksByProject(projectId: number) {
   const db = getDb();
   return db
     .select()
@@ -254,12 +195,12 @@ export function getTasksByProject(projectId: number) {
     .all();
 }
 
-export function getTaskById(id: number) {
+export async function getTaskById(id: number) {
   const db = getDb();
-  return db.select().from(tasks).where(eq(tasks.id, id)).get() ?? null;
+  return (await db.select().from(tasks).where(eq(tasks.id, id)).get()) ?? null;
 }
 
-export function searchTasks(params: {
+export async function searchTasks(params: {
   ownerId: number;
   search?: string;
   status?: "todo" | "in_progress" | "done";
@@ -268,34 +209,32 @@ export function searchTasks(params: {
 }) {
   const db = getDb();
 
-  // Get project ids owned by this user
-  const userProjectIds = db
+  const userProjects = await db
     .select({ id: projects.id })
     .from(projects)
     .where(eq(projects.ownerId, params.ownerId))
-    .all()
-    .map((p) => p.id);
-
-  if (userProjectIds.length === 0) return [];
-
-  const all = db
-    .select()
-    .from(tasks)
-    .where(
-      and(
-        params.search ? like(tasks.title, `%${params.search}%`) : undefined,
-        params.status ? eq(tasks.status, params.status) : undefined,
-        params.priority ? eq(tasks.priority, params.priority) : undefined,
-        params.projectId ? eq(tasks.projectId, params.projectId) : undefined
-      )
-    )
-    .orderBy(desc(tasks.createdAt))
     .all();
 
-  return all.filter((t) => userProjectIds.includes(t.projectId));
+  if (userProjects.length === 0) return [];
+  const userProjectIds = userProjects.map((p) => p.id);
+
+  const conditions = [
+    params.search ? like(tasks.title, `%${params.search}%`) : undefined,
+    params.status ? eq(tasks.status, params.status) : undefined,
+    params.priority ? eq(tasks.priority, params.priority) : undefined,
+    params.projectId ? eq(tasks.projectId, params.projectId) : undefined,
+    inArray(tasks.projectId, userProjectIds),
+  ].filter(Boolean);
+
+  return db
+    .select()
+    .from(tasks)
+    .where(and(...(conditions as Parameters<typeof and>)))
+    .orderBy(desc(tasks.createdAt))
+    .all();
 }
 
-export function createTask(data: {
+export async function createTask(data: {
   title: string;
   description: string | null;
   status: "todo" | "in_progress" | "done";
@@ -306,24 +245,25 @@ export function createTask(data: {
   const db = getDb();
   const now = new Date();
 
-  // Get max position in the same status column
-  const existing = db
+  const existing = await db
     .select({ position: tasks.position })
     .from(tasks)
-    .where(and(eq(tasks.projectId, data.projectId), eq(tasks.status, data.status)))
+    .where(
+      and(eq(tasks.projectId, data.projectId), eq(tasks.status, data.status))
+    )
     .orderBy(desc(tasks.position))
     .get();
 
   const position = existing ? existing.position + 1 : 0;
 
-  return db
+  const result = await db
     .insert(tasks)
     .values({ ...data, position, createdAt: now, updatedAt: now })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
-export function updateTask(
+export async function updateTask(
   id: number,
   data: Partial<{
     title: string;
@@ -338,7 +278,6 @@ export function updateTask(
   const now = new Date();
 
   const updateData: Record<string, unknown> = { updatedAt: now };
-
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.status !== undefined) {
@@ -349,24 +288,26 @@ export function updateTask(
   if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
   if (data.position !== undefined) updateData.position = data.position;
 
-  return (
-    db
-      .update(tasks)
-      .set(updateData)
-      .where(eq(tasks.id, id))
-      .returning()
-      .get() ?? null
-  );
+  const result = await db
+    .update(tasks)
+    .set(updateData)
+    .where(eq(tasks.id, id))
+    .returning();
+  return result[0] ?? null;
 }
 
-export function deleteTask(id: number) {
+export async function deleteTask(id: number) {
   const db = getDb();
-  return db.delete(tasks).where(eq(tasks.id, id)).returning().get() ?? null;
+  const result = await db
+    .delete(tasks)
+    .where(eq(tasks.id, id))
+    .returning();
+  return result[0] ?? null;
 }
 
 // ─── Comments ─────────────────────────────────────────────────────────────────
 
-export function getCommentsByTask(taskId: number) {
+export async function getCommentsByTask(taskId: number) {
   const db = getDb();
   return db
     .select({
@@ -385,37 +326,35 @@ export function getCommentsByTask(taskId: number) {
     .all();
 }
 
-export function createComment(data: {
+export async function createComment(data: {
   taskId: number;
   content: string;
   authorId: number;
 }) {
   const db = getDb();
   const now = new Date();
-  return db
+  const result = await db
     .insert(comments)
     .values({ ...data, createdAt: now, updatedAt: now })
-    .returning()
-    .get()!;
+    .returning();
+  return result[0]!;
 }
 
-export function deleteComment(id: number, authorId: number) {
+export async function deleteComment(id: number, authorId: number) {
   const db = getDb();
-  return (
-    db
-      .delete(comments)
-      .where(and(eq(comments.id, id), eq(comments.authorId, authorId)))
-      .returning()
-      .get() ?? null
-  );
+  const result = await db
+    .delete(comments)
+    .where(and(eq(comments.id, id), eq(comments.authorId, authorId)))
+    .returning();
+  return result[0] ?? null;
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
-export function getDashboardMetrics(ownerId: number) {
+export async function getDashboardMetrics(ownerId: number) {
   const db = getDb();
 
-  const userProjects = db
+  const userProjects = await db
     .select({ id: projects.id })
     .from(projects)
     .where(eq(projects.ownerId, ownerId))
@@ -424,12 +363,19 @@ export function getDashboardMetrics(ownerId: number) {
   const totalProjects = userProjects.length;
 
   if (totalProjects === 0) {
-    return { totalProjects: 0, total: 0, todo: 0, inProgress: 0, done: 0, overdue: 0 };
+    return {
+      totalProjects: 0,
+      total: 0,
+      todo: 0,
+      inProgress: 0,
+      done: 0,
+      overdue: 0,
+    };
   }
 
   const projectIds = userProjects.map((p) => p.id);
 
-  const allTasks = db
+  const allTasks = await db
     .select({
       id: tasks.id,
       status: tasks.status,
@@ -437,11 +383,14 @@ export function getDashboardMetrics(ownerId: number) {
       projectId: tasks.projectId,
     })
     .from(tasks)
-    .all()
-    .filter((t) => projectIds.includes(t.projectId));
+    .where(inArray(tasks.projectId, projectIds))
+    .all();
 
   const now = new Date();
-  let todo = 0, inProgress = 0, done = 0, overdue = 0;
+  let todo = 0,
+    inProgress = 0,
+    done = 0,
+    overdue = 0;
 
   for (const task of allTasks) {
     if (task.status === "todo") todo++;
@@ -453,12 +402,5 @@ export function getDashboardMetrics(ownerId: number) {
     }
   }
 
-  return {
-    totalProjects,
-    total: allTasks.length,
-    todo,
-    inProgress,
-    done,
-    overdue,
-  };
+  return { totalProjects, total: allTasks.length, todo, inProgress, done, overdue };
 }
