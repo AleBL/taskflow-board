@@ -65,3 +65,13 @@
 - [x] Create env.example with required variables
 - [x] Create DEPLOY.md with step-by-step Vercel instructions
 - [x] Export project as ZIP for user import
+
+## Database Migration (better-sqlite3 → Turso/libSQL)
+- [ ] Install @libsql/client + drizzle-orm/libsql
+- [ ] Remove better-sqlite3 dependency
+- [ ] Update drizzle.config.ts for libSQL
+- [ ] Rewrite server/db.ts to use libSQL client
+- [ ] Update scripts/migrate.mjs for Turso
+- [ ] Apply migrations to Turso remote database
+- [ ] Update tests to use in-memory libSQL
+- [ ] Commit and push changes
