@@ -22,7 +22,8 @@ export default function Register() {
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: async () => {
-      await utils.auth.me.invalidate();
+      // Refetch auth.me so the user is in cache BEFORE navigating.
+      await utils.auth.me.refetch();
       navigate("/dashboard");
     },
     onError: (e) => {

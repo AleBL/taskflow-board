@@ -20,7 +20,9 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: async () => {
-      await utils.auth.me.invalidate();
+      // Refetch auth.me so the user is in cache BEFORE navigating.
+      // This prevents the dashboard from seeing UNAUTHORIZED on first load.
+      await utils.auth.me.refetch();
       navigate("/dashboard");
     },
     onError: (e) => {

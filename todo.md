@@ -66,6 +66,9 @@
 - [x] Create DEPLOY.md with step-by-step Vercel instructions
 - [x] Export project as ZIP for user import
 
+## Bug Fixes (Round 2)
+- [x] Fix: session cookie not sent after login (UNAUTHORIZED on dashboard/projects)
+
 ## Database Migration (better-sqlite3 → Turso/libSQL)
 - [ ] Install @libsql/client + drizzle-orm/libsql
 - [ ] Remove better-sqlite3 dependency

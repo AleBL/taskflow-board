@@ -16,8 +16,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (typeof window === "undefined") return;
 
   const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
-
   if (!isUnauthorized) return;
+
+  // Don't redirect if already on an auth page to avoid redirect loops
+  const authPaths = ["/login", "/register"];
+  if (authPaths.some(p => window.location.pathname.startsWith(p))) return;
 
   window.location.href = getLoginUrl();
 };
