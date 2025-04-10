@@ -57,7 +57,9 @@
     "passwordMismatch": "Passwords do not match",
     "passwordTooShort": "Password must be at least 8 characters",
     "invalidCredentials": "Invalid email or password",
-    "emailInUse": "Email already in use"
+    "emailInUse": "Email already in use",
+    "signInToContinue": "Sign in to continue",
+    "signInToContinueDesc": "Access to this dashboard requires authentication. Please sign in to continue."
   },
   "home": {
     "tagline": "Kanban Task Management",
@@ -149,6 +151,10 @@
       "in_progress": "In Progress",
       "done": "Done"
     }
+  },
+  "errorBoundary": {
+    "title": "An unexpected error occurred.",
+    "reload": "Reload Page"
   },
   "comments": {
     "title": "Comments",

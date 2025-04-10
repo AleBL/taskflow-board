@@ -78,3 +78,8 @@
 - [ ] Apply migrations to Turso remote database
 - [ ] Update tests to use in-memory libSQL
 - [ ] Commit and push changes
+
+## Bug Fixes (Round 3)
+- [x] Fix: untranslated texts in Home.tsx (landing page)
+- [x] Fix: untranslated texts in DashboardLayout unauthenticated screen
+- [x] Fix: audit and translate all remaining hardcoded English strings (TaskCard priority labels, ErrorBoundary)

@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AlertTriangle, Calendar, GripVertical, MessageSquare, Pencil, Trash2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
 
@@ -21,10 +23,10 @@ export interface Task {
   updatedAt: Date;
 }
 
-const PRIORITY_CONFIG = {
-  low: { label: "Low", className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  medium: { label: "Medium", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
-  high: { label: "High", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
+const PRIORITY_CLASS: Record<TaskPriority, string> = {
+  low: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+  high: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400",
 };
 
 type Props = {
@@ -35,6 +37,7 @@ type Props = {
 };
 
 export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -55,7 +58,8 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
     new Date(task.dueDate) < new Date() &&
     task.status !== "done";
 
-  const priority = PRIORITY_CONFIG[task.priority as TaskPriority] ?? PRIORITY_CONFIG.medium;
+  const priorityClass = PRIORITY_CLASS[task.priority as TaskPriority] ?? PRIORITY_CLASS.medium;
+  const priorityLabel = t(`tasks.priorities.${task.priority}`);
 
   return (
     <div
@@ -91,9 +95,9 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
           {/* Badges row */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${priority.className}`}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${priorityClass}`}
             >
-              {priority.label}
+              {priorityLabel}
             </span>
 
             {task.dueDate && (

@@ -57,7 +57,9 @@
     "passwordMismatch": "As senhas não coincidem",
     "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
     "invalidCredentials": "E-mail ou senha inválidos",
-    "emailInUse": "E-mail já cadastrado"
+    "emailInUse": "E-mail já cadastrado",
+    "signInToContinue": "Faça login para continuar",
+    "signInToContinueDesc": "O acesso a este painel requer autenticação. Por favor, faça login para continuar."
   },
   "home": {
     "tagline": "Gerenciamento de Tarefas Kanban",
@@ -149,6 +151,10 @@
       "in_progress": "Em Andamento",
       "done": "Concluído"
     }
+  },
+  "errorBoundary": {
+    "title": "Ocorreu um erro inesperado.",
+    "reload": "Recarregar Página"
   },
   "comments": {
     "title": "Comentários",

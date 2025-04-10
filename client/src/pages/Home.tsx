@@ -1,10 +1,13 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Loader2, LayoutDashboard, CheckSquare, Kanban } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
@@ -22,6 +25,24 @@ export default function Home() {
     );
   }
 
+  const features = [
+    {
+      icon: <Kanban className="h-5 w-5 text-primary" />,
+      title: t("home.features.kanban.title"),
+      desc: t("home.features.kanban.desc"),
+    },
+    {
+      icon: <CheckSquare className="h-5 w-5 text-primary" />,
+      title: t("home.features.tracking.title"),
+      desc: t("home.features.tracking.desc"),
+    },
+    {
+      icon: <LayoutDashboard className="h-5 w-5 text-primary" />,
+      title: t("home.features.dashboard.title"),
+      desc: t("home.features.dashboard.desc"),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -30,9 +51,12 @@ export default function Home() {
           <Kanban className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg text-foreground">TaskFlow</span>
         </div>
-        <Button asChild>
-          <Link href="/login">Sign in</Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <LanguageSwitcher />
+          <Button asChild>
+            <Link href="/login">{t("auth.signIn")}</Link>
+          </Button>
+        </div>
       </header>
 
       {/* Hero */}
@@ -40,46 +64,29 @@ export default function Home() {
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
             <Kanban className="h-4 w-4" />
-            Kanban Task Management
+            {t("home.tagline")}
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground leading-tight">
-            Organize your work,<br />
-            <span className="text-primary">ship faster</span>
+            {t("home.headline")}<br />
+            <span className="text-primary">{t("home.headlineAccent")}</span>
           </h1>
           <p className="text-muted-foreground text-lg">
-            TaskFlow is a clean, focused Kanban board for managing projects and tasks.
-            Drag, drop, and get things done.
+            {t("home.subheadline")}
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <Button size="lg" asChild>
-            <Link href="/register">Get started free</Link>
+            <Link href="/register">{t("home.getStartedFree")}</Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/login">Sign in</Link>
+            <Link href="/login">{t("auth.signIn")}</Link>
           </Button>
         </div>
 
         {/* Feature highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full mt-8">
-          {[
-            {
-              icon: <Kanban className="h-5 w-5 text-primary" />,
-              title: "Kanban Boards",
-              desc: "Visualize your workflow with drag-and-drop columns",
-            },
-            {
-              icon: <CheckSquare className="h-5 w-5 text-primary" />,
-              title: "Task Tracking",
-              desc: "Priorities, due dates, and comments on every task",
-            },
-            {
-              icon: <LayoutDashboard className="h-5 w-5 text-primary" />,
-              title: "Dashboard",
-              desc: "See all your metrics at a glance",
-            },
-          ].map((f) => (
+          {features.map((f) => (
             <div
               key={f.title}
               className="bg-card border border-border rounded-xl p-5 text-left space-y-2"
