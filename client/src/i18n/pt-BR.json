@@ -38,7 +38,9 @@
     "projects": "Projetos",
     "tasks": "Tarefas",
     "search": "Buscar Tarefas",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "profile": "Perfil",
+    "view": "Ver"
   },
   "auth": {
     "signIn": "Entrar",
@@ -87,7 +89,8 @@
     "createFirstTask": "Crie sua primeira tarefa para começar",
     "tasksByStatus": "Tarefas por Status",
     "completionRate": "Taxa de Conclusão",
-    "tasksCompleted": "tarefas concluídas"
+    "tasksCompleted": "tarefas concluídas",
+    "overdueToastDesc": "Revise e atualize suas tarefas atrasadas"
   },
   "projects": {
     "title": "Projetos",
@@ -155,6 +158,21 @@
   "errorBoundary": {
     "title": "Ocorreu um erro inesperado.",
     "reload": "Recarregar Página"
+  },
+  "profile": {
+    "title": "Perfil",
+    "subtitle": "Gerencie as configurações da sua conta",
+    "accountInfo": "Informações da Conta",
+    "accountInfoDesc": "Atualize seu nome de exibição",
+    "changePassword": "Alterar Senha",
+    "changePasswordDesc": "Atualize sua senha para manter sua conta segura",
+    "saveName": "Salvar Nome",
+    "updatePassword": "Atualizar Senha",
+    "currentPassword": "Senha Atual",
+    "newPassword": "Nova Senha",
+    "nameSaved": "Nome atualizado com sucesso",
+    "passwordChanged": "Senha alterada com sucesso",
+    "wrongCurrentPassword": "Senha atual incorreta"
   },
   "comments": {
     "title": "Comentários",

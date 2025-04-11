@@ -97,6 +97,19 @@ export async function getUserByEmail(email: string) {
   );
 }
 
+export async function updateUser(
+  id: number,
+  data: Partial<{ name: string; passwordHash: string }>
+) {
+  const db = getDb();
+  const result = await db
+    .update(users)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(users.id, id))
+    .returning();
+  return result[0] ?? null;
+}
+
 export async function createLocalUser(data: {
   name: string;
   email: string;
@@ -120,6 +133,16 @@ export async function createLocalUser(data: {
     })
     .returning();
   return result[0]!;
+}
+
+export async function getProjectMembers(projectId: number) {
+  // Returns all users who own the project (for now: owner + any future members)
+  // We return all users as potential assignees for simplicity
+  const db = getDb();
+  return db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .all();
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
@@ -241,6 +264,7 @@ export async function createTask(data: {
   priority: "low" | "medium" | "high";
   dueDate: Date | null;
   projectId: number;
+  assigneeId?: number | null;
 }) {
   const db = getDb();
   const now = new Date();
@@ -272,6 +296,7 @@ export async function updateTask(
     priority: "low" | "medium" | "high";
     dueDate: Date | null;
     position: number;
+    assigneeId: number | null;
   }>
 ) {
   const db = getDb();
@@ -287,6 +312,7 @@ export async function updateTask(
   if (data.priority !== undefined) updateData.priority = data.priority;
   if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
   if (data.position !== undefined) updateData.position = data.position;
+  if ('assigneeId' in data) updateData.assigneeId = (data as { assigneeId?: number | null }).assigneeId ?? null;
 
   const result = await db
     .update(tasks)

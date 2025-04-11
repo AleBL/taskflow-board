@@ -38,7 +38,9 @@
     "projects": "Projects",
     "tasks": "Tasks",
     "search": "Search Tasks",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "profile": "Profile",
+    "view": "View"
   },
   "auth": {
     "signIn": "Sign In",
@@ -87,7 +89,8 @@
     "createFirstTask": "Create your first task to get started",
     "tasksByStatus": "Tasks by Status",
     "completionRate": "Completion Rate",
-    "tasksCompleted": "tasks completed"
+    "tasksCompleted": "tasks completed",
+    "overdueToastDesc": "Review and update your overdue tasks"
   },
   "projects": {
     "title": "Projects",
@@ -155,6 +158,21 @@
   "errorBoundary": {
     "title": "An unexpected error occurred.",
     "reload": "Reload Page"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Manage your account settings",
+    "accountInfo": "Account Information",
+    "accountInfoDesc": "Update your display name",
+    "changePassword": "Change Password",
+    "changePasswordDesc": "Update your password to keep your account secure",
+    "saveName": "Save Name",
+    "updatePassword": "Update Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "nameSaved": "Name updated successfully",
+    "passwordChanged": "Password changed successfully",
+    "wrongCurrentPassword": "Current password is incorrect"
   },
   "comments": {
     "title": "Comments",

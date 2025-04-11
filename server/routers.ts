@@ -21,7 +21,10 @@ import {
   deleteComment,
   getDashboardMetrics,
   getUserByEmail,
+  getUserById,
   createLocalUser,
+  updateUser,
+  getProjectMembers,
 } from "./db";
 import { hashPassword, verifyPassword, signSession } from "./auth";
 
@@ -110,6 +113,10 @@ const tasksRouter = router({
       return task;
     }),
 
+  members: protectedProcedure
+    .input(z.object({ projectId: z.number().int().positive() }))
+    .query(({ input }) => getProjectMembers(input.projectId)),
+
   create: protectedProcedure
     .input(
       z.object({
@@ -119,6 +126,7 @@ const tasksRouter = router({
         priority: z.enum(["low", "medium", "high"]).optional(),
         dueDate: z.number().optional().nullable(),
         projectId: z.number().int().positive(),
+        assigneeId: z.number().int().positive().optional().nullable(),
       })
     )
     .mutation(({ input }) =>
@@ -129,6 +137,7 @@ const tasksRouter = router({
         priority: input.priority ?? "medium",
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         projectId: input.projectId,
+        assigneeId: input.assigneeId ?? null,
       })
     ),
 
@@ -142,6 +151,7 @@ const tasksRouter = router({
         priority: z.enum(["low", "medium", "high"]).optional(),
         dueDate: z.number().optional().nullable(),
         position: z.number().optional(),
+        assigneeId: z.number().int().positive().optional().nullable(),
       })
     )
     .mutation(async ({ input }) => {
@@ -300,6 +310,44 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+
+    updateProfile: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().min(2).max(100).optional(),
+          currentPassword: z.string().optional(),
+          newPassword: z.string().min(8).max(128).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const user = await getUserById(ctx.user.id);
+        if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+
+        const updateData: Partial<{ name: string; passwordHash: string }> = {};
+
+        if (input.name) updateData.name = input.name;
+
+        if (input.newPassword) {
+          if (!input.currentPassword) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Current password is required" });
+          }
+          if (!user.passwordHash) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "No password set" });
+          }
+          const valid = await verifyPassword(input.currentPassword, user.passwordHash);
+          if (!valid) {
+            throw new TRPCError({ code: "UNAUTHORIZED", message: "Current password is incorrect" });
+          }
+          updateData.passwordHash = await hashPassword(input.newPassword);
+        }
+
+        if (Object.keys(updateData).length === 0) {
+          return { success: true, user };
+        }
+
+        const updated = await updateUser(ctx.user.id, updateData);
+        return { success: true, user: updated };
+      }),
   }),
 
   projects: projectsRouter,
