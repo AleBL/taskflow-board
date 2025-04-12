@@ -36,6 +36,7 @@ type TaskForm = {
   status: "todo" | "in_progress" | "done";
   priority: "low" | "medium" | "high";
   dueDate: string;
+  assigneeId: string; // "none" or numeric string
 };
 
 const defaultForm: TaskForm = {
@@ -44,6 +45,7 @@ const defaultForm: TaskForm = {
   status: "todo",
   priority: "medium",
   dueDate: "",
+  assigneeId: "none",
 };
 
 export function TaskModal({ open, onClose, projectId, task }: Props) {
@@ -60,11 +62,17 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
           dueDate: task.dueDate
             ? new Date(task.dueDate).toISOString().split("T")[0]
             : "",
+          assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
         }
       : defaultForm
   );
 
   const [comment, setComment] = useState("");
+
+  const { data: members } = trpc.tasks.members.useQuery(
+    { projectId },
+    { enabled: open }
+  );
 
   const { data: comments } = trpc.comments.listByTask.useQuery(
     { taskId: task?.id ?? 0 },
@@ -109,12 +117,18 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
     e.preventDefault();
     if (!form.title.trim()) return;
 
+    const assigneeId =
+      form.assigneeId && form.assigneeId !== "none"
+        ? parseInt(form.assigneeId, 10)
+        : null;
+
     const payload = {
       title: form.title,
       description: form.description || undefined,
       status: form.status,
       priority: form.priority,
       dueDate: form.dueDate ? new Date(form.dueDate).getTime() : null,
+      assigneeId,
     };
 
     if (task) {
@@ -202,6 +216,27 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
             </div>
           </div>
 
+          {/* Assignee */}
+          <div className="space-y-2">
+            <Label>{t("tasks.assignee")}</Label>
+            <Select
+              value={form.assigneeId}
+              onValueChange={(v) => setForm({ ...form, assigneeId: v })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("tasks.unassigned")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("tasks.unassigned")}</SelectItem>
+                {members?.map((m) => (
+                  <SelectItem key={m.id} value={String(m.id)}>
+                    {m.name ?? m.email ?? `User #${m.id}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="due-date">{t("tasks.dueDate")}</Label>
             <Input
@@ -232,10 +267,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
 
             <div className="space-y-3 max-h-48 overflow-y-auto">
               {comments?.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex gap-2 group"
-                >
+                <div key={c.id} className="flex gap-2 group">
                   <div className="flex-1 bg-muted rounded-lg px-3 py-2">
                     <p className="text-xs font-medium text-foreground mb-1">
                       {c.authorName ?? "Unknown"}
