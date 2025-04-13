@@ -13,6 +13,8 @@ import {
   Plus,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 function MetricCard({
   title,
@@ -52,6 +54,25 @@ export default function Dashboard() {
   const [, navigate] = useLocation();
   const { data: metrics, isLoading } = trpc.dashboard.metrics.useQuery();
   const { data: projects } = trpc.projects.list.useQuery();
+  const overdueToastShown = useRef(false);
+
+  // Show a toast when there are overdue tasks (only once per session)
+  useEffect(() => {
+    if (!overdueToastShown.current && metrics && (metrics.overdue ?? 0) > 0) {
+      overdueToastShown.current = true;
+      toast.warning(
+        `${metrics.overdue} ${t("dashboard.overdue").toLowerCase()}`,
+        {
+          description: t("dashboard.overdueToastDesc"),
+          duration: 6000,
+          action: {
+            label: t("common.view"),
+            onClick: () => navigate("/tasks"),
+          },
+        }
+      );
+    }
+  }, [metrics, t, navigate]);
 
   return (
     <DashboardLayout>
