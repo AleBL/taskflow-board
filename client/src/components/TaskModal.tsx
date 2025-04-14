@@ -208,9 +208,9 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">{t("tasks.priorityLow")}</SelectItem>
-                  <SelectItem value="medium">{t("tasks.priorityMedium")}</SelectItem>
-                  <SelectItem value="high">{t("tasks.priorityHigh")}</SelectItem>
+                  <SelectItem value="low">{t("tasks.priorities.low")}</SelectItem>
+                  <SelectItem value="medium">{t("tasks.priorities.medium")}</SelectItem>
+                  <SelectItem value="high">{t("tasks.priorities.high")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
