@@ -22,7 +22,7 @@ export default function Register() {
 
   const registerMutation = trpc.auth.register.useMutation({
     onSuccess: async () => {
-      // Refetch auth.me so the user is in cache BEFORE navigating.
+
       await utils.auth.me.refetch();
       navigate("/dashboard");
     },
@@ -46,13 +46,13 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      {/* Language switcher top-right */}
+
       <div className="absolute top-4 right-4">
         <LanguageSwitcher />
       </div>
 
       <div className="w-full max-w-sm space-y-6">
-        {/* Logo */}
+
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
@@ -63,7 +63,6 @@ export default function Register() {
           <p className="text-sm text-muted-foreground">{t("auth.fillDetails")}</p>
         </div>
 
-        {/* Form */}
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">{t("auth.getStarted")}</CardTitle>

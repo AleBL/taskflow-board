@@ -45,7 +45,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
+
       <header className="border-b border-border px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Kanban className="h-6 w-6 text-primary" />
@@ -59,7 +59,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero */}
       <main className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
@@ -84,7 +83,6 @@ export default function Home() {
           </Button>
         </div>
 
-        {/* Feature highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full mt-8">
           {features.map((f) => (
             <div

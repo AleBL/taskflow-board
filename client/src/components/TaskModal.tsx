@@ -36,7 +36,7 @@ type TaskForm = {
   status: "todo" | "in_progress" | "done";
   priority: "low" | "medium" | "high";
   dueDate: string;
-  assigneeId: string; // "none" or numeric string
+  assigneeId: string;
 };
 
 const defaultForm: TaskForm = {
@@ -216,7 +216,6 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
             </div>
           </div>
 
-          {/* Assignee */}
           <div className="space-y-2">
             <Label>{t("tasks.assignee")}</Label>
             <Select
@@ -258,7 +257,6 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
           </DialogFooter>
         </form>
 
-        {/* Comments section — only when editing */}
         {task && (
           <div className="border-t border-border pt-4 space-y-3">
             <h3 className="text-sm font-semibold text-foreground">

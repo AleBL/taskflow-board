@@ -1,9 +1,3 @@
-/**
- * Local auth tests — register, login, logout.
- * Uses an in-memory libSQL database via setDb() injection.
- */
-
-// Set env FIRST before any module that calls getDb()
 process.env.TURSO_DATABASE_URL = ":memory:";
 delete process.env.TURSO_AUTH_TOKEN;
 
@@ -13,8 +7,6 @@ import { drizzle } from "drizzle-orm/libsql";
 import { setDb } from "./db";
 import { COOKIE_NAME } from "../shared/const";
 import type { TrpcContext } from "./_core/context";
-
-// ─── Bootstrap in-memory schema ───────────────────────────────────────────────
 
 const _memClient = createClient({ url: ":memory:" });
 
@@ -36,11 +28,7 @@ beforeAll(async () => {
   setDb(drizzle(_memClient));
 });
 
-// Import router AFTER setDb is called in beforeAll
-// (dynamic import ensures module is loaded after env is set)
 const { appRouter } = await import("./routers");
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type CookieCall = { name: string; value: string; options: Record<string, unknown> };
 type ClearCall = { name: string; options: Record<string, unknown> };
@@ -67,8 +55,6 @@ function createPublicCtx() {
 
   return { ctx, setCookies, clearCookies };
 }
-
-// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("auth.register", () => {
   it("registers a new user and sets a session cookie", async () => {

@@ -5,8 +5,6 @@ import { users, projects, tasks, comments } from "../drizzle/schema";
 import type { InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-// ─── Database connection ───────────────────────────────────────────────────────
-
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export function getDb() {
@@ -25,17 +23,13 @@ export function getDb() {
   return _db;
 }
 
-// Reset for tests
 export function resetDb() {
   _db = null;
 }
 
-// Inject a pre-built db instance (used in tests)
 export function setDb(db: ReturnType<typeof drizzle>) {
   _db = db;
 }
-
-// ─── Users ────────────────────────────────────────────────────────────────────
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required");
@@ -136,16 +130,13 @@ export async function createLocalUser(data: {
 }
 
 export async function getProjectMembers(projectId: number) {
-  // Returns all users who own the project (for now: owner + any future members)
-  // We return all users as potential assignees for simplicity
+
   const db = getDb();
   return db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
     .all();
 }
-
-// ─── Projects ─────────────────────────────────────────────────────────────────
 
 export async function getProjectsByOwner(ownerId: number) {
   const db = getDb();
@@ -205,8 +196,6 @@ export async function deleteProject(id: number, ownerId: number) {
     .returning();
   return result[0] ?? null;
 }
-
-// ─── Tasks ────────────────────────────────────────────────────────────────────
 
 export async function getTasksByProject(projectId: number) {
   const db = getDb();
@@ -331,8 +320,6 @@ export async function deleteTask(id: number) {
   return result[0] ?? null;
 }
 
-// ─── Comments ─────────────────────────────────────────────────────────────────
-
 export async function getCommentsByTask(taskId: number) {
   const db = getDb();
   return db
@@ -374,8 +361,6 @@ export async function deleteComment(id: number, authorId: number) {
     .returning();
   return result[0] ?? null;
 }
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export async function getDashboardMetrics(ownerId: number) {
   const db = getDb();

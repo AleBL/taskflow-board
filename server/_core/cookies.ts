@@ -21,8 +21,7 @@ export function getSessionCookieOptions(
   return {
     httpOnly: true,
     path: "/",
-    // Use SameSite=lax for HTTP (localhost dev) — browsers reject SameSite=none without Secure.
-    // Use SameSite=none + Secure for HTTPS (production / deployed).
+
     sameSite: secure ? "none" : "lax",
     secure,
   };

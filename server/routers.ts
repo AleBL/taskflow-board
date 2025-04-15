@@ -28,8 +28,6 @@ import {
 } from "./db";
 import { hashPassword, verifyPassword, signSession } from "./auth";
 
-// ─── Projects Router ──────────────────────────────────────────────────────────
-
 const projectsRouter = router({
   list: protectedProcedure.query(({ ctx }) =>
     getProjectsByOwner(ctx.user.id)
@@ -84,8 +82,6 @@ const projectsRouter = router({
       return { success: true };
     }),
 });
-
-// ─── Tasks Router ─────────────────────────────────────────────────────────────
 
 const tasksRouter = router({
   listByProject: protectedProcedure
@@ -190,8 +186,6 @@ const tasksRouter = router({
     }),
 });
 
-// ─── Comments Router ──────────────────────────────────────────────────────────
-
 const commentsRouter = router({
   listByTask: protectedProcedure
     .input(z.object({ taskId: z.number().int().positive() }))
@@ -221,15 +215,11 @@ const commentsRouter = router({
     }),
 });
 
-// ─── Dashboard Router ─────────────────────────────────────────────────────────
-
 const dashboardRouter = router({
   metrics: protectedProcedure.query(({ ctx }) =>
     getDashboardMetrics(ctx.user.id)
   ),
 });
-
-// ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
   system: systemRouter,

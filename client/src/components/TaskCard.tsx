@@ -70,7 +70,7 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
       }`}
     >
       <div className="flex items-start gap-2">
-        {/* Drag handle */}
+
         <button
           {...attributes}
           {...listeners}
@@ -80,19 +80,17 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
         </button>
 
         <div className="flex-1 min-w-0 space-y-2">
-          {/* Title */}
+
           <p className="text-sm font-medium text-foreground leading-snug line-clamp-2">
             {task.title}
           </p>
 
-          {/* Description preview */}
           {task.description && (
             <p className="text-xs text-muted-foreground line-clamp-1">
               {task.description}
             </p>
           )}
 
-          {/* Badges row */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
               className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${priorityClass}`}
@@ -129,7 +127,6 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           <Button
             variant="ghost"

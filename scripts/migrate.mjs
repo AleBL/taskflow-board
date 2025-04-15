@@ -1,10 +1,3 @@
-/**
- * Database migration script for Turso (libSQL).
- * Reads TURSO_DATABASE_URL and TURSO_AUTH_TOKEN from environment.
- *
- * Usage:
- *   pnpm db:migrate
- */
 import { createClient } from "@libsql/client";
 import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
@@ -26,7 +19,6 @@ console.log(`🔗  Connecting to: ${url}`);
 
 const client = createClient({ url, authToken });
 
-// Read all migration SQL files in order
 const migrationsDir = join(__dirname, "../drizzle/migrations");
 const files = readdirSync(migrationsDir)
   .filter((f) => f.endsWith(".sql"))
@@ -42,7 +34,6 @@ for (const file of files) {
   console.log(`    - ${file}`);
 }
 
-// Create migrations tracking table
 await client.execute(`
   CREATE TABLE IF NOT EXISTS __drizzle_migrations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +42,6 @@ await client.execute(`
   )
 `);
 
-// Apply each migration if not already applied
 for (const file of files) {
   const hash = file.replace(".sql", "");
 
@@ -67,7 +57,6 @@ for (const file of files) {
 
   const sql = readFileSync(join(migrationsDir, file), "utf-8");
 
-  // Split on statement boundaries and execute each
   const statements = sql
     .split("--> statement-breakpoint")
     .map((s) => s.trim())

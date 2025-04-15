@@ -1,29 +1,19 @@
-/**
- * Manus Debug Collector (agent-friendly)
- *
- * Captures:
- * 1) Console logs
- * 2) Network requests (fetch + XHR)
- * 3) User interactions (semantic uiEvents: click/type/submit/nav/scroll/etc.)
- *
- * Data is periodically sent to /__manus__/logs
- * Note: uiEvents are mirrored to sessionEvents for sessionReplay.log
- */
+
 (function () {
   "use strict";
 
-  // Prevent double initialization
+
   if (window.__MANUS_DEBUG_COLLECTOR__) return;
 
-  // ==========================================================================
-  // Configuration
-  // ==========================================================================
+
+
+
   const CONFIG = {
     reportEndpoint: "/__manus__/logs",
     bufferSize: {
       console: 500,
       network: 200,
-      // semantic, agent-friendly UI events
+
       ui: 500,
     },
     reportInterval: 2000,
@@ -37,18 +27,18 @@
       "session",
     ],
     maxBodyLength: 10240,
-    // UI event logging privacy policy:
-    // - inputs matching sensitiveFields or type=password are masked by default
-    // - non-sensitive inputs log up to 200 chars
+
+
+
     uiInputMaxLen: 200,
     uiTextMaxLen: 80,
-    // Scroll throttling: minimum ms between scroll events
+
     scrollThrottleMs: 500,
   };
 
-  // ==========================================================================
-  // Storage
-  // ==========================================================================
+
+
+
   const store = {
     consoleLogs: [],
     networkRequests: [],
@@ -57,9 +47,9 @@
     lastScrollTime: 0,
   };
 
-  // ==========================================================================
-  // Utility Functions
-  // ==========================================================================
+
+
+
 
   function sanitizeValue(value, depth) {
     if (depth === void 0) depth = 0;
@@ -126,9 +116,9 @@
     }
   }
 
-  // ==========================================================================
-  // Semantic UI Event Logging (agent-friendly)
-  // ==========================================================================
+
+
+
 
   function shouldIgnoreTarget(target) {
     try {
@@ -181,7 +171,7 @@
     var type = tag === "input" ? (getAttr("type") || "text") : null;
     var href = tag === "a" ? getAttr("href") || null : null;
 
-    // a small, stable hint for agents (avoid building full CSS paths)
+
     var selectorHint = null;
     if (testId) selectorHint = '[data-testid="' + testId + '"]';
     else if (dataLoc) selectorHint = '[data-loc="' + dataLoc + '"]';
@@ -250,7 +240,7 @@
   }
 
   function installUiEventListeners() {
-    // Clicks
+
     document.addEventListener(
       "click",
       function (e) {
@@ -265,7 +255,7 @@
       true
     );
 
-    // Typing "commit" events
+
     document.addEventListener(
       "change",
       function (e) {
@@ -302,7 +292,7 @@
       true
     );
 
-    // Enter/Escape are useful for form flows & modals
+
     document.addEventListener(
       "keydown",
       function (e) {
@@ -314,7 +304,7 @@
       true
     );
 
-    // Form submissions
+
     document.addEventListener(
       "submit",
       function (e) {
@@ -325,7 +315,7 @@
       true
     );
 
-    // Throttled scroll events
+
     window.addEventListener(
       "scroll",
       function () {
@@ -343,7 +333,7 @@
       { passive: true }
     );
 
-    // Navigation tracking for SPAs
+
     function nav(reason) {
       logUiEvent("navigate", { reason: reason });
     }
@@ -368,9 +358,9 @@
     });
   }
 
-  // ==========================================================================
-  // Console Interception
-  // ==========================================================================
+
+
+
 
   var originalConsole = {
     log: console.log.bind(console),
@@ -416,7 +406,7 @@
     });
     pruneBuffer(store.consoleLogs, CONFIG.bufferSize.console);
 
-    // Mark an error moment in UI event stream for agents
+
     logUiEvent("error", {
       message: event.message,
       filename: event.filename,
@@ -446,27 +436,27 @@
     });
   });
 
-  // ==========================================================================
-  // Fetch Interception
-  // ==========================================================================
+
+
+
 
   var originalFetch = window.fetch.bind(window);
 
   window.fetch = function (input, init) {
     init = init || {};
     var startTime = Date.now();
-    // Handle string, Request object, or URL object
+
     var url = typeof input === "string"
       ? input
       : (input && (input.url || input.href || String(input))) || "";
     var method = init.method || (input && input.method) || "GET";
 
-    // Don't intercept internal requests
+
     if (url.indexOf("/__manus__/") === 0) {
       return originalFetch(input, init);
     }
 
-    // Safely parse headers (avoid breaking if headers format is invalid)
+
     var requestHeaders = {};
     try {
       if (init.headers) {
@@ -504,7 +494,7 @@
           body: null,
         };
 
-        // Semantic network hint for agents on failures (sync, no need to wait for body)
+
         if (response.status >= 400) {
           logUiEvent("network_error", {
             kind: "fetch",
@@ -515,7 +505,7 @@
           });
         }
 
-        // Skip body capture for streaming responses (SSE, etc.) to avoid memory leaks
+
         var isStreaming = contentType.indexOf("text/event-stream") !== -1 ||
                           contentType.indexOf("application/stream") !== -1 ||
                           contentType.indexOf("application/x-ndjson") !== -1;
@@ -526,7 +516,7 @@
           return response;
         }
 
-        // Skip body capture for large responses to avoid memory issues
+
         if (contentLength && parseInt(contentLength, 10) > CONFIG.maxBodyLength) {
           entry.response.body = "[Response too large: " + contentLength + " bytes]";
           store.networkRequests.push(entry);
@@ -534,7 +524,7 @@
           return response;
         }
 
-        // Skip body capture for binary content types
+
         var isBinary = contentType.indexOf("image/") !== -1 ||
                        contentType.indexOf("video/") !== -1 ||
                        contentType.indexOf("audio/") !== -1 ||
@@ -548,10 +538,10 @@
           return response;
         }
 
-        // For text responses, clone and read body in background
+
         var clonedResponse = response.clone();
 
-        // Async: read body in background, don't block the response
+
         clonedResponse
           .text()
           .then(function (text) {
@@ -569,7 +559,7 @@
             pruneBuffer(store.networkRequests, CONFIG.bufferSize.network);
           });
 
-        // Return response immediately, don't wait for body reading
+
         return response;
       })
       .catch(function (error) {
@@ -590,9 +580,9 @@
       });
   };
 
-  // ==========================================================================
-  // XHR Interception
-  // ==========================================================================
+
+
+
 
   var originalXHROpen = XMLHttpRequest.prototype.open;
   var originalXHRSend = XMLHttpRequest.prototype.send;
@@ -621,12 +611,12 @@
         var contentType = (xhr.getResponseHeader("content-type") || "").toLowerCase();
         var responseBody = null;
 
-        // Skip body capture for streaming responses
+
         var isStreaming = contentType.indexOf("text/event-stream") !== -1 ||
                           contentType.indexOf("application/stream") !== -1 ||
                           contentType.indexOf("application/x-ndjson") !== -1;
 
-        // Skip body capture for binary content types
+
         var isBinary = contentType.indexOf("image/") !== -1 ||
                        contentType.indexOf("video/") !== -1 ||
                        contentType.indexOf("audio/") !== -1 ||
@@ -639,7 +629,7 @@
         } else if (isBinary) {
           responseBody = "[Binary content: " + contentType + "]";
         } else {
-          // Safe to read responseText for text responses
+
           try {
             var text = xhr.responseText || "";
             if (text.length > CONFIG.maxBodyLength) {
@@ -648,7 +638,7 @@
               responseBody = sanitizeValue(tryParseJson(text));
             }
           } catch (e) {
-            // responseText may throw for non-text responses
+
             responseBody = "[Unable to read response: " + e.message + "]";
           }
         }
@@ -709,16 +699,16 @@
     return originalXHRSend.apply(this, arguments);
   };
 
-  // ==========================================================================
-  // Data Reporting
-  // ==========================================================================
+
+
+
 
   function reportLogs() {
     var consoleLogs = store.consoleLogs.splice(0);
     var networkRequests = store.networkRequests.splice(0);
     var uiEvents = store.uiEvents.splice(0);
 
-    // Skip if no new data
+
     if (
       consoleLogs.length === 0 &&
       networkRequests.length === 0 &&
@@ -731,9 +721,9 @@
       timestamp: Date.now(),
       consoleLogs: consoleLogs,
       networkRequests: networkRequests,
-      // Mirror uiEvents to sessionEvents for sessionReplay.log
+
       sessionEvents: uiEvents,
-      // agent-friendly semantic events
+
       uiEvents: uiEvents,
     };
 
@@ -742,7 +732,7 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).catch(function () {
-      // Put data back on failure (but respect limits)
+
       store.consoleLogs = consoleLogs.concat(store.consoleLogs);
       store.networkRequests = networkRequests.concat(store.networkRequests);
       store.uiEvents = uiEvents.concat(store.uiEvents);
@@ -753,10 +743,10 @@
     });
   }
 
-  // Periodic reporting
+
   setInterval(reportLogs, CONFIG.reportInterval);
 
-  // Report on page unload
+
   window.addEventListener("beforeunload", function () {
     var consoleLogs = store.consoleLogs;
     var networkRequests = store.networkRequests;
@@ -774,17 +764,17 @@
       timestamp: Date.now(),
       consoleLogs: consoleLogs,
       networkRequests: networkRequests,
-      // Mirror uiEvents to sessionEvents for sessionReplay.log
+
       sessionEvents: uiEvents,
       uiEvents: uiEvents,
     };
 
     if (navigator.sendBeacon) {
       var payloadStr = JSON.stringify(payload);
-      // sendBeacon has ~64KB limit, truncate if too large
-      var MAX_BEACON_SIZE = 60000; // Leave some margin
+
+      var MAX_BEACON_SIZE = 60000;
       if (payloadStr.length > MAX_BEACON_SIZE) {
-        // Prioritize: keep recent events, drop older logs
+
         var truncatedPayload = {
           timestamp: Date.now(),
           consoleLogs: consoleLogs.slice(-50),
@@ -799,18 +789,18 @@
     }
   });
 
-  // ==========================================================================
-  // Initialization
-  // ==========================================================================
 
-  // Install semantic UI listeners ASAP
+
+
+
+
   try {
     installUiEventListeners();
   } catch (e) {
     console.warn("[Manus] Failed to install UI listeners:", e);
   }
 
-  // Mark as initialized
+
   window.__MANUS_DEBUG_COLLECTOR__ = {
     version: "2.0-no-rrweb",
     store: store,

@@ -122,7 +122,7 @@ export default function Projects() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("projects.title")}</h1>
@@ -136,7 +136,6 @@ export default function Projects() {
           </Button>
         </div>
 
-        {/* List */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -225,7 +224,6 @@ export default function Projects() {
         )}
       </div>
 
-      {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

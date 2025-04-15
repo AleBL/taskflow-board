@@ -56,7 +56,6 @@ export default function Dashboard() {
   const { data: projects } = trpc.projects.list.useQuery();
   const overdueToastShown = useRef(false);
 
-  // Show a toast when there are overdue tasks (only once per session)
   useEffect(() => {
     if (!overdueToastShown.current && metrics && (metrics.overdue ?? 0) > 0) {
       overdueToastShown.current = true;
@@ -77,7 +76,7 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
+
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h1>
@@ -91,7 +90,6 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Metrics */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -131,7 +129,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Overdue alert */}
         {(metrics?.overdue ?? 0) > 0 && (
           <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="flex items-center gap-3 py-4">
@@ -156,7 +153,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Recent Projects */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">

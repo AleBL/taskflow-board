@@ -1,7 +1,3 @@
-/**
- * Local authentication helpers.
- * Replaces Manus OAuth with email/password + JWT cookie.
- */
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import type { Request } from "express";
@@ -11,8 +7,6 @@ import { getUserById } from "./db";
 import type { User } from "../drizzle/schema";
 
 const BCRYPT_ROUNDS = 12;
-
-// ─── JWT ──────────────────────────────────────────────────────────────────────
 
 function getSecretKey() {
   const secret = ENV.cookieSecret || "fallback-dev-secret-change-in-prod";
@@ -39,8 +33,6 @@ export async function verifySession(token: string): Promise<number | null> {
   }
 }
 
-// ─── Password ─────────────────────────────────────────────────────────────────
-
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
@@ -51,8 +43,6 @@ export async function verifyPassword(
 ): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
-
-// ─── Request authentication ───────────────────────────────────────────────────
 
 export async function authenticateRequest(req: Request): Promise<User | null> {
   const raw = req.headers.cookie ?? "";

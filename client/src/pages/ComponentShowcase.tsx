@@ -187,7 +187,6 @@ export default function ComponentsShowcase() {
   const [dialogInput, setDialogInput] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // AI ChatBox demo state
   const [chatMessages, setChatMessages] = useState<Message[]>([
     { role: "system", content: "You are a helpful assistant." },
   ]);
@@ -210,11 +209,10 @@ export default function ComponentsShowcase() {
   };
 
   const handleChatSend = (content: string) => {
-    // Add user message
+
     const newMessages: Message[] = [...chatMessages, { role: "user", content }];
     setChatMessages(newMessages);
 
-    // Simulate AI response with delay
     setIsChatLoading(true);
     setTimeout(() => {
       const aiResponse: Message = {
@@ -243,7 +241,7 @@ export default function ComponentsShowcase() {
         </div>
 
         <div className="space-y-12">
-          {/* Text Colors Section */}
+
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Text Colors</h3>
             <Card>
@@ -322,7 +320,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Color Combinations Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Color Combinations</h3>
             <Card>
@@ -381,7 +378,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Buttons Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Buttons</h3>
             <Card>
@@ -403,7 +399,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Form Inputs Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Form Inputs</h3>
             <Card>
@@ -677,7 +672,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Data Display Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Data Display</h3>
             <Card>
@@ -866,7 +860,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Alerts Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Alerts</h3>
             <div className="space-y-4">
@@ -887,7 +880,6 @@ export default function ComponentsShowcase() {
             </div>
           </section>
 
-          {/* Tabs Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Tabs</h3>
             <Tabs defaultValue="account" className="w-full">
@@ -956,7 +948,6 @@ export default function ComponentsShowcase() {
             </Tabs>
           </section>
 
-          {/* Accordion Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Accordion</h3>
             <Accordion type="single" collapsible className="w-full">
@@ -983,7 +974,6 @@ export default function ComponentsShowcase() {
             </Accordion>
           </section>
 
-          {/* Collapsible Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Collapsible</h3>
             <Collapsible>
@@ -1014,7 +1004,6 @@ export default function ComponentsShowcase() {
             </Collapsible>
           </section>
 
-          {/* Dialog, Sheet, Drawer Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Overlays</h3>
             <Card>
@@ -1118,7 +1107,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Menus Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Menus</h3>
             <Card>
@@ -1169,7 +1157,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Calendar Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Calendar</h3>
             <Card>
@@ -1184,7 +1171,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Carousel Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Carousel</h3>
             <Card>
@@ -1212,7 +1198,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Toggle Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Toggle</h3>
             <Card>
@@ -1253,7 +1238,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Aspect Ratio & Scroll Area Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Layout Components</h3>
             <Card>
@@ -1285,7 +1269,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Resizable Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Resizable Panels</h3>
             <Card>
@@ -1310,7 +1293,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* Toast Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">Toast</h3>
             <Card>
@@ -1391,7 +1373,6 @@ export default function ComponentsShowcase() {
             </Card>
           </section>
 
-          {/* AI ChatBox Section */}
           <section className="space-y-4">
             <h3 className="text-2xl font-semibold">AI ChatBox</h3>
             <Card>

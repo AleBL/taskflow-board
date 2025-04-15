@@ -1,13 +1,3 @@
-/**
- * Vercel Serverless Function entry point.
- * This file wraps the Express app for Vercel's serverless runtime.
- *
- * Deploy steps:
- * 1. Push this repo to GitHub
- * 2. Import project on vercel.com
- * 3. Set the environment variables listed in .env.example
- * 4. Vercel will auto-detect vercel.json and deploy
- */
 import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";

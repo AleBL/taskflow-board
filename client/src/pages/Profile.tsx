@@ -88,7 +88,6 @@ export default function Profile() {
           <p className="text-muted-foreground mt-1">{t("profile.subtitle")}</p>
         </div>
 
-        {/* Account Info */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -137,7 +136,6 @@ export default function Profile() {
 
         <Separator />
 
-        {/* Change Password */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

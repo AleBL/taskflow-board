@@ -4,8 +4,6 @@ import { drizzle } from "drizzle-orm/libsql";
 import { users, projects, tasks, comments } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
-// ─── In-memory DB setup ───────────────────────────────────────────────────────
-
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +52,7 @@ const SCHEMA_SQL = `
 
 async function createTestDb() {
   const client = createClient({ url: ":memory:" });
-  // Execute each statement separately
+
   for (const stmt of SCHEMA_SQL.split(";").map((s) => s.trim()).filter(Boolean)) {
     await client.execute(stmt);
   }
@@ -62,8 +60,6 @@ async function createTestDb() {
 }
 
 type TestDb = Awaited<ReturnType<typeof createTestDb>>;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function seedUser(db: TestDb, openId = "user-1") {
   const result = await db
@@ -115,8 +111,6 @@ async function seedTask(
     .returning();
   return result[0]!;
 }
-
-// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe("Users", () => {
   it("inserts and retrieves a user by openId", async () => {

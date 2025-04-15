@@ -102,7 +102,7 @@ export default function TaskSearch() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
-        {/* Header */}
+
         <div>
           <h1 className="text-2xl font-bold text-foreground">{t("tasks.searchTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
@@ -110,7 +110,6 @@ export default function TaskSearch() {
           </p>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -167,7 +166,6 @@ export default function TaskSearch() {
           )}
         </div>
 
-        {/* Results */}
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

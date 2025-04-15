@@ -26,7 +26,6 @@ import { useTranslation } from "react-i18next";
 
 type Status = "todo" | "in_progress" | "done";
 
-// Labels are set dynamically via i18n in the component
 const COLUMNS: { id: Status; labelKey: string; color: string }[] = [
   { id: "todo", labelKey: "tasks.statusTodo", color: "bg-slate-500" },
   { id: "in_progress", labelKey: "tasks.statusInProgress", color: "bg-amber-500" },
@@ -49,7 +48,7 @@ function KanbanColumn({
   const { t } = useTranslation();
   return (
     <div className="flex flex-col bg-muted/40 rounded-xl min-w-[280px] w-[280px] shrink-0">
-      {/* Column header */}
+
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <div className={`h-2.5 w-2.5 rounded-full ${column.color}`} />
@@ -70,7 +69,6 @@ function KanbanColumn({
         </Button>
       </div>
 
-      {/* Tasks */}
       <div className="flex-1 p-3 space-y-2 min-h-[120px]">
         <SortableContext
           items={tasks.map((t) => t.id)}
@@ -159,7 +157,6 @@ export default function ProjectDetail() {
     const activeId = active.id as number;
     const overId = over.id as string | number;
 
-    // If dragging over a column id (string)
     const overColumn = COLUMNS.find((c) => c.id === overId);
     if (overColumn) {
       const task = allTasks.find((t) => t.id === activeId);
@@ -182,18 +179,16 @@ export default function ProjectDetail() {
       const activeId = active.id as number;
       const overId = over.id as string | number;
 
-      // Find the task being dragged
       const task = allTasks.find((t) => t.id === activeId);
       if (!task) return;
 
-      // Determine target status
       let targetStatus: Status = task.status as Status;
 
       const overColumn = COLUMNS.find((c) => c.id === overId);
       if (overColumn) {
         targetStatus = overColumn.id;
       } else {
-        // Dropped over another task — find its column
+
         const overTask = allTasks.find((t) => t.id === overId);
         if (overTask) targetStatus = overTask.status as Status;
       }
@@ -246,7 +241,7 @@ export default function ProjectDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-5 h-full flex flex-col">
-        {/* Header */}
+
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -280,7 +275,6 @@ export default function ProjectDetail() {
           </Button>
         </div>
 
-        {/* Kanban Board */}
         <div className="flex-1 overflow-x-auto kanban-scroll pb-4">
           <DndContext
             sensors={sensors}
@@ -317,7 +311,6 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Task Modal */}
       <TaskModal
         open={modalOpen}
         onClose={() => {
