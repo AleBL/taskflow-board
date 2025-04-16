@@ -1,3 +1,10 @@
+/**
+ * Database migration script for Turso (libSQL).
+ * Reads TURSO_DATABASE_URL and TURSO_AUTH_TOKEN from environment.
+ *
+ * Usage:
+ *   pnpm db:migrate
+ */
 import { createClient } from "@libsql/client";
 import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";

@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Kanban, FolderKanban, Search, UserCircle, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Kanban, FolderKanban, Search, UserCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";

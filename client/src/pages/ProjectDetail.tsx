@@ -4,21 +4,27 @@ import { TaskModal } from "@/components/TaskModal";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
+  CollisionDetection,
   DndContext,
   DragEndEvent,
   DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  closestCorners,
+  pointerWithin,
+  rectIntersection,
+  useDroppable,
   useSensor,
   useSensors,
-  closestCorners,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ArrowLeft, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Loader2, Plus, Users } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCallback, useMemo, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -31,6 +37,16 @@ const COLUMNS: { id: Status; labelKey: string; color: string }[] = [
   { id: "in_progress", labelKey: "tasks.statusInProgress", color: "bg-amber-500" },
   { id: "done", labelKey: "tasks.statusDone", color: "bg-emerald-500" },
 ];
+
+const collisionDetection: CollisionDetection = (args) => {
+  const pointerHits = pointerWithin(args);
+  if (pointerHits.length > 0) return pointerHits;
+
+  const intersections = rectIntersection(args);
+  if (intersections.length > 0) return intersections;
+
+  return closestCorners(args);
+};
 
 function KanbanColumn({
   column,
@@ -46,9 +62,18 @@ function KanbanColumn({
   onDeleteTask: (id: number) => void;
 }) {
   const { t } = useTranslation();
-  return (
-    <div className="flex flex-col bg-muted/40 rounded-xl min-w-[280px] w-[280px] shrink-0">
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.id,
+    data: { status: column.id },
+  });
 
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex h-full flex-col rounded-xl bg-muted/40 min-w-[280px] w-[280px] shrink-0 transition-colors ${
+        isOver ? "bg-primary/5" : ""
+      }`}
+    >
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <div className={`h-2.5 w-2.5 rounded-full ${column.color}`} />
@@ -69,7 +94,7 @@ function KanbanColumn({
         </Button>
       </div>
 
-      <div className="flex-1 p-3 space-y-2 min-h-[120px]">
+      <div className="flex-1 p-3 space-y-2 min-h-[220px]">
         <SortableContext
           items={tasks.map((t) => t.id)}
           strategy={verticalListSortingStrategy}
@@ -108,10 +133,17 @@ export default function ProjectDetail() {
   const { data: project, isLoading: projectLoading } =
     trpc.projects.getById.useQuery({ id: projectId });
 
+  const { data: members = [] } =
+    trpc.tasks.members.useQuery({ projectId }, { enabled: !!projectId });
+
   const { data: allTasks = [], isLoading: tasksLoading } =
     trpc.tasks.listByProject.useQuery({ projectId });
 
-  const updateStatusMutation = trpc.tasks.updateStatus.useMutation({
+  const updateStatusMutation = trpc.tasks.update.useMutation({
+    onSuccess: () => {
+      utils.tasks.listByProject.invalidate({ projectId });
+      utils.dashboard.metrics.invalidate();
+    },
     onError: (e) => {
       toast.error(e.message);
       utils.tasks.listByProject.invalidate({ projectId });
@@ -130,10 +162,11 @@ export default function ProjectDetail() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [defaultStatus, setDefaultStatus] = useState<Status>("todo");
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
   const tasksByStatus = useMemo(() => {
@@ -151,23 +184,8 @@ export default function ProjectDetail() {
   }
 
   function handleDragOver(event: DragOverEvent) {
-    const { active, over } = event;
+    const { over } = event;
     if (!over) return;
-
-    const activeId = active.id as number;
-    const overId = over.id as string | number;
-
-    const overColumn = COLUMNS.find((c) => c.id === overId);
-    if (overColumn) {
-      const task = allTasks.find((t) => t.id === activeId);
-      if (task && task.status !== overColumn.id) {
-        utils.tasks.listByProject.setData({ projectId }, (old) =>
-          old?.map((t) =>
-            t.id === activeId ? { ...t, status: overColumn.id } : t
-          )
-        );
-      }
-    }
   }
 
   const handleDragEnd = useCallback(
@@ -177,24 +195,25 @@ export default function ProjectDetail() {
       if (!over) return;
 
       const activeId = active.id as number;
-      const overId = over.id as string | number;
+      const overId = over.id;
 
-      const task = allTasks.find((t) => t.id === activeId);
-      if (!task) return;
+      const draggedTask = allTasks.find((t) => t.id === activeId);
+      if (!draggedTask) return;
 
-      let targetStatus: Status = task.status as Status;
+      let newStatus: Status | null = null;
 
-      const overColumn = COLUMNS.find((c) => c.id === overId);
-      if (overColumn) {
-        targetStatus = overColumn.id;
+      const targetTask = allTasks.find((t) => t.id === overId);
+      if (targetTask) {
+        newStatus = targetTask.status;
       } else {
-
-        const overTask = allTasks.find((t) => t.id === overId);
-        if (overTask) targetStatus = overTask.status as Status;
+        const targetColumn = COLUMNS.find((c) => c.id === overId);
+        if (targetColumn) {
+          newStatus = targetColumn.id;
+        }
       }
 
-      if (task.status !== targetStatus) {
-        updateStatusMutation.mutate({ id: activeId, status: targetStatus });
+      if (newStatus && draggedTask.status !== newStatus) {
+        updateStatusMutation.mutate({ id: activeId, status: newStatus });
       }
     },
     [allTasks, updateStatusMutation]
@@ -241,7 +260,6 @@ export default function ProjectDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-5 h-full flex flex-col">
-
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -266,19 +284,44 @@ export default function ProjectDetail() {
               )}
             </div>
           </div>
-          <Button
-            className="ml-auto"
-            onClick={() => openCreateModal("todo")}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {t("tasks.addTask")}
-          </Button>
+          <div className="ml-auto flex items-center gap-3">
+            {members.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="flex -space-x-2">
+                  {members.slice(0, 5).map((m) => (
+                    <Tooltip key={m.id}>
+                      <TooltipTrigger asChild>
+                        <Avatar className="h-7 w-7 border-2 border-background cursor-default">
+                          <AvatarFallback className="text-xs" style={{ backgroundColor: `hsl(${(m.id * 47) % 360}, 60%, 45%)`, color: "white" }}>
+                            {(m.name ?? m.email ?? "?").slice(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>{m.name ?? m.email}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                  {members.length > 5 && (
+                    <Avatar className="h-7 w-7 border-2 border-background">
+                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                        +{members.length - 5}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
+              </div>
+            )}
+            <Button onClick={() => openCreateModal("todo")}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t("tasks.addTask")}
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-x-auto kanban-scroll pb-4">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={collisionDetection}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}

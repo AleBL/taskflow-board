@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -64,6 +63,8 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
   return (
     <div
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       style={style}
       className={`bg-card border border-border rounded-lg p-3 shadow-sm group hover:shadow-md transition-shadow ${
         isDragging ? "ring-2 ring-primary" : ""
@@ -72,8 +73,6 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
       <div className="flex items-start gap-2">
 
         <button
-          {...attributes}
-          {...listeners}
           className="mt-0.5 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0"
         >
           <GripVertical className="h-4 w-4" />

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
-import { users, projects, tasks, comments } from "../drizzle/schema";
+import { users, projects, tasks, comments, projectMembers } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 
 const SCHEMA_SQL = `
@@ -47,6 +47,14 @@ const SCHEMA_SQL = `
     authorId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
     updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+  );
+  CREATE TABLE IF NOT EXISTS project_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member',
+    joinedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+    UNIQUE(projectId, userId)
   );
 `;
 
@@ -325,5 +333,77 @@ describe("Comments", () => {
 
     expect(task2Comments).toHaveLength(1);
     expect(task2Comments[0].content).toBe("Comment on task 2");
+  });
+});
+
+describe("Project Members", () => {
+  it("adds a member to a project", async () => {
+    const db = await createTestDb();
+    const owner = await seedUser(db, "owner-1");
+    const member = await seedUser(db, "member-1");
+    const project = await seedProject(db, owner.id);
+
+    await db.insert(projectMembers).values({
+      projectId: project.id,
+      userId: member.id,
+      role: "member",
+      joinedAt: new Date(),
+    });
+
+    const members = await db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.projectId, project.id))
+      .all();
+
+    expect(members).toHaveLength(1);
+    expect(members[0].userId).toBe(member.id);
+  });
+
+  it("prevents duplicate membership", async () => {
+    const db = await createTestDb();
+    const owner = await seedUser(db, "owner-2");
+    const member = await seedUser(db, "member-2");
+    const project = await seedProject(db, owner.id);
+
+    await db.insert(projectMembers).values({
+      projectId: project.id,
+      userId: member.id,
+      role: "member",
+      joinedAt: new Date(),
+    });
+
+    await expect(
+      db.insert(projectMembers).values({
+        projectId: project.id,
+        userId: member.id,
+        role: "member",
+        joinedAt: new Date(),
+      })
+    ).rejects.toThrow();
+  });
+
+  it("cascades member deletion when project is deleted", async () => {
+    const db = await createTestDb();
+    const owner = await seedUser(db, "owner-3");
+    const member = await seedUser(db, "member-3");
+    const project = await seedProject(db, owner.id);
+
+    await db.insert(projectMembers).values({
+      projectId: project.id,
+      userId: member.id,
+      role: "member",
+      joinedAt: new Date(),
+    });
+
+    await db.delete(projects).where(eq(projects.id, project.id));
+
+    const remaining = await db
+      .select()
+      .from(projectMembers)
+      .where(eq(projectMembers.projectId, project.id))
+      .all();
+
+    expect(remaining).toHaveLength(0);
   });
 });

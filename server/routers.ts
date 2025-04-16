@@ -5,7 +5,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import {
-  getProjectsByOwner,
+  getProjectsByUser,
   getProjectById,
   createProject,
   updateProject,
@@ -24,13 +24,16 @@ import {
   getUserById,
   createLocalUser,
   updateUser,
-  getProjectMembers,
+  getProjectMembersList,
+  getAllUsers,
 } from "./db";
 import { hashPassword, verifyPassword, signSession } from "./auth";
 
+// ─── Projects Router ──────────────────────────────────────────────────────────
+
 const projectsRouter = router({
   list: protectedProcedure.query(({ ctx }) =>
-    getProjectsByOwner(ctx.user.id)
+    getProjectsByUser(ctx.user.id)
   ),
 
   getById: protectedProcedure
@@ -83,6 +86,10 @@ const projectsRouter = router({
     }),
 });
 
+const usersRouter = router({
+  list: protectedProcedure.query(() => getAllUsers()),
+});
+
 const tasksRouter = router({
   listByProject: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
@@ -98,7 +105,7 @@ const tasksRouter = router({
       })
     )
     .query(({ ctx, input }) =>
-      searchTasks({ ownerId: ctx.user.id, ...input })
+      searchTasks({ userId: ctx.user.id, ...input })
     ),
 
   getById: protectedProcedure
@@ -111,7 +118,7 @@ const tasksRouter = router({
 
   members: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(({ input }) => getProjectMembers(input.projectId)),
+    .query(({ input }) => getProjectMembersList(input.projectId)),
 
   create: protectedProcedure
     .input(
@@ -340,6 +347,7 @@ export const appRouter = router({
       }),
   }),
 
+  users: usersRouter,
   projects: projectsRouter,
   tasks: tasksRouter,
   comments: commentsRouter,

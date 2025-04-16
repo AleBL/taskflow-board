@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { Loader2, Send, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "./TaskCard";
 import { useTranslation } from "react-i18next";
@@ -69,8 +69,25 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
 
   const [comment, setComment] = useState("");
 
-  const { data: members } = trpc.tasks.members.useQuery(
-    { projectId },
+  useEffect(() => {
+    if (task) {
+      setForm({
+        title: task.title,
+        description: task.description ?? "",
+        status: task.status,
+        priority: task.priority,
+        dueDate: task.dueDate
+          ? new Date(task.dueDate).toISOString().split("T")[0]
+          : "",
+        assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
+      });
+    } else if (open) {
+      setForm(defaultForm);
+    }
+  }, [task, open]);
+
+  const { data: members } = trpc.users.list.useQuery(
+    undefined,
     { enabled: open }
   );
 

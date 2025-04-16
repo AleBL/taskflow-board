@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import { eq, and, like, desc, asc, inArray } from "drizzle-orm";
-import { users, projects, tasks, comments } from "../drizzle/schema";
+import { users, projects, tasks, comments, projectMembers } from "../drizzle/schema";
 import type { InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -129,34 +129,87 @@ export async function createLocalUser(data: {
   return result[0]!;
 }
 
-export async function getProjectMembers(projectId: number) {
-
+export async function getAllUsers() {
   const db = getDb();
   return db
     .select({ id: users.id, name: users.name, email: users.email })
     .from(users)
+    .orderBy(asc(users.name))
     .all();
 }
 
-export async function getProjectsByOwner(ownerId: number) {
+export async function getProjectMembersList(projectId: number) {
   const db = getDb();
+  return db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      role: projectMembers.role,
+      joinedAt: projectMembers.joinedAt,
+    })
+    .from(projectMembers)
+    .innerJoin(users, eq(projectMembers.userId, users.id))
+    .where(eq(projectMembers.projectId, projectId))
+    .orderBy(asc(projectMembers.joinedAt))
+    .all();
+}
+
+export async function isProjectMember(projectId: number, userId: number): Promise<boolean> {
+  const db = getDb();
+  const row = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .get();
+  return row !== undefined;
+}
+
+export async function addProjectMember(projectId: number, userId: number, role: "owner" | "member" = "member") {
+  const db = getDb();
+  const existing = await db
+    .select({ id: projectMembers.id })
+    .from(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .get();
+
+  if (!existing) {
+    await db.insert(projectMembers).values({
+      projectId,
+      userId,
+      role,
+      joinedAt: new Date(),
+    });
+  }
+}
+
+export async function getAccessibleProjectIds(userId: number): Promise<number[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(eq(projectMembers.userId, userId))
+    .all();
+  return rows.map((r) => r.projectId);
+}
+
+export async function getProjectsByUser(userId: number) {
+  const db = getDb();
+  const accessibleIds = await getAccessibleProjectIds(userId);
+  if (accessibleIds.length === 0) return [];
   return db
     .select()
     .from(projects)
-    .where(eq(projects.ownerId, ownerId))
+    .where(inArray(projects.id, accessibleIds))
     .orderBy(desc(projects.createdAt))
     .all();
 }
 
-export async function getProjectById(id: number, ownerId: number) {
+export async function getProjectById(id: number, userId: number) {
   const db = getDb();
-  return (
-    (await db
-      .select()
-      .from(projects)
-      .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
-      .get()) ?? null
-  );
+  const isMember = await isProjectMember(id, userId);
+  if (!isMember) return null;
+  return (await db.select().from(projects).where(eq(projects.id, id)).get()) ?? null;
 }
 
 export async function createProject(data: {
@@ -171,28 +224,40 @@ export async function createProject(data: {
     .insert(projects)
     .values({ ...data, createdAt: now, updatedAt: now })
     .returning();
-  return result[0]!;
+  const project = result[0]!;
+
+  // Auto-add the creator as owner member
+  await addProjectMember(project.id, data.ownerId, "owner");
+
+  return project;
 }
 
 export async function updateProject(
   id: number,
-  ownerId: number,
+  userId: number,
   data: Partial<{ name: string; description: string | null; color: string }>
 ) {
   const db = getDb();
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, id), eq(projects.ownerId, userId)))
+    .get();
+  if (!project) return null;
+
   const result = await db
     .update(projects)
     .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
+    .where(eq(projects.id, id))
     .returning();
   return result[0] ?? null;
 }
 
-export async function deleteProject(id: number, ownerId: number) {
+export async function deleteProject(id: number, userId: number) {
   const db = getDb();
   const result = await db
     .delete(projects)
-    .where(and(eq(projects.id, id), eq(projects.ownerId, ownerId)))
+    .where(and(eq(projects.id, id), eq(projects.ownerId, userId)))
     .returning();
   return result[0] ?? null;
 }
@@ -213,7 +278,7 @@ export async function getTaskById(id: number) {
 }
 
 export async function searchTasks(params: {
-  ownerId: number;
+  userId: number;
   search?: string;
   status?: "todo" | "in_progress" | "done";
   priority?: "low" | "medium" | "high";
@@ -221,21 +286,15 @@ export async function searchTasks(params: {
 }) {
   const db = getDb();
 
-  const userProjects = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.ownerId, params.ownerId))
-    .all();
-
-  if (userProjects.length === 0) return [];
-  const userProjectIds = userProjects.map((p) => p.id);
+  const accessibleIds = await getAccessibleProjectIds(params.userId);
+  if (accessibleIds.length === 0) return [];
 
   const conditions = [
     params.search ? like(tasks.title, `%${params.search}%`) : undefined,
     params.status ? eq(tasks.status, params.status) : undefined,
     params.priority ? eq(tasks.priority, params.priority) : undefined,
     params.projectId ? eq(tasks.projectId, params.projectId) : undefined,
-    inArray(tasks.projectId, userProjectIds),
+    inArray(tasks.projectId, accessibleIds),
   ].filter(Boolean);
 
   return db
@@ -273,7 +332,14 @@ export async function createTask(data: {
     .insert(tasks)
     .values({ ...data, position, createdAt: now, updatedAt: now })
     .returning();
-  return result[0]!;
+
+  const task = result[0]!;
+
+  if (data.assigneeId) {
+    await addProjectMember(data.projectId, data.assigneeId, "member");
+  }
+
+  return task;
 }
 
 export async function updateTask(
@@ -301,14 +367,21 @@ export async function updateTask(
   if (data.priority !== undefined) updateData.priority = data.priority;
   if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
   if (data.position !== undefined) updateData.position = data.position;
-  if ('assigneeId' in data) updateData.assigneeId = (data as { assigneeId?: number | null }).assigneeId ?? null;
+  if ("assigneeId" in data) updateData.assigneeId = data.assigneeId ?? null;
 
   const result = await db
     .update(tasks)
     .set(updateData)
     .where(eq(tasks.id, id))
     .returning();
-  return result[0] ?? null;
+
+  const task = result[0] ?? null;
+
+  if (task && data.assigneeId) {
+    await addProjectMember(task.projectId, data.assigneeId, "member");
+  }
+
+  return task;
 }
 
 export async function deleteTask(id: number) {
@@ -362,29 +435,15 @@ export async function deleteComment(id: number, authorId: number) {
   return result[0] ?? null;
 }
 
-export async function getDashboardMetrics(ownerId: number) {
+export async function getDashboardMetrics(userId: number) {
   const db = getDb();
 
-  const userProjects = await db
-    .select({ id: projects.id })
-    .from(projects)
-    .where(eq(projects.ownerId, ownerId))
-    .all();
-
-  const totalProjects = userProjects.length;
+  const accessibleIds = await getAccessibleProjectIds(userId);
+  const totalProjects = accessibleIds.length;
 
   if (totalProjects === 0) {
-    return {
-      totalProjects: 0,
-      total: 0,
-      todo: 0,
-      inProgress: 0,
-      done: 0,
-      overdue: 0,
-    };
+    return { totalProjects: 0, total: 0, todo: 0, inProgress: 0, done: 0, overdue: 0 };
   }
-
-  const projectIds = userProjects.map((p) => p.id);
 
   const allTasks = await db
     .select({
@@ -394,14 +453,11 @@ export async function getDashboardMetrics(ownerId: number) {
       projectId: tasks.projectId,
     })
     .from(tasks)
-    .where(inArray(tasks.projectId, projectIds))
+    .where(inArray(tasks.projectId, accessibleIds))
     .all();
 
   const now = new Date();
-  let todo = 0,
-    inProgress = 0,
-    done = 0,
-    overdue = 0;
+  let todo = 0, inProgress = 0, done = 0, overdue = 0;
 
   for (const task of allTasks) {
     if (task.status === "todo") todo++;

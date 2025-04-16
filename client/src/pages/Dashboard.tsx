@@ -65,7 +65,7 @@ export default function Dashboard() {
           description: t("dashboard.overdueToastDesc"),
           duration: 6000,
           action: {
-            label: t("common.view"),
+            label: t("nav.view"),
             onClick: () => navigate("/tasks"),
           },
         }
@@ -76,7 +76,6 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h1>

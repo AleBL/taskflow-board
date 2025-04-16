@@ -83,6 +83,27 @@ export const tasks = sqliteTable("tasks", {
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 
+// ─── Project Members ─────────────────────────────────────────────────────────
+
+export const projectMembers = sqliteTable("project_members", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  projectId: integer("projectId")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  userId: integer("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  role: text("role", { enum: ["owner", "member"] })
+    .notNull()
+    .default("member"),
+  joinedAt: integer("joinedAt", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+});
+
+export type ProjectMember = typeof projectMembers.$inferSelect;
+export type InsertProjectMember = typeof projectMembers.$inferInsert;
+
 // ─── Comments ─────────────────────────────────────────────────────────────────
 
 export const comments = sqliteTable("comments", {
