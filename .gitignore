@@ -109,8 +109,6 @@ temp/
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 
-# Manus version file (auto-generated, not part of source)
-client/public/__manus__/version.json
 
 # SQLite database files
 data/
@@ -118,5 +116,3 @@ data/
 *.db-shm
 *.db-wal
 
-# Manus internal
-.manus/

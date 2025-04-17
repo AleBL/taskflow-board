@@ -4,7 +4,6 @@ A clean, focused Kanban task management application built with React, tRPC, and 
 
 ## Features
 
-- **Authentication** — OAuth-based login via Manus Auth
 - **Projects** — Create, edit, and delete projects with custom colors
 - **Kanban Board** — Drag-and-drop tasks between To Do, In Progress, and Done columns
 - **Tasks** — Full CRUD with title, description, priority, due date, and status
@@ -15,21 +14,53 @@ A clean, focused Kanban task management application built with React, tRPC, and 
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Frontend | React 19, TypeScript, TailwindCSS 4, shadcn/ui |
-| Backend | Node.js, Express, tRPC 11 |
-| Database | SQLite (via better-sqlite3 + Drizzle ORM) |
-| Auth | Manus OAuth |
-| Drag & Drop | @dnd-kit |
-| Testing | Vitest |
+| Layer | Technology | Version |
+|---|---|---|
+| **Frontend Framework** | React, TypeScript | React 19.2, TS 5.9 |
+| **Build & Dev** | Vite, esbuild | Vite 7.1, esbuild 0.25 |
+| **Styling** | TailwindCSS, Radix UI, shadcn/ui | TailwindCSS 4.1, Radix UI latest |
+| **UI Components** | Lucide React (icons), Embla Carousel, Sonner (toast), Recharts | Latest |
+| **Backend** | Node.js, Express, tRPC | Express 4.21, tRPC 11.6 |
+| **Database** | Turso (LibSQL), Drizzle ORM | @libsql/client 0.17, Drizzle 0.45 |
+| **Form & Validation** | React Hook Form, Zod | 7.64, 4.1 |
+| **Query Management** | TanStack React Query | 5.90 |
+| **Routing** | Wouter (lightweight router) | 3.3.5 |
+| **Drag & Drop** | @dnd-kit | 6.3 (core), 10.0 (sortable) |
+| **i18n** | i18next, react-i18next | 25.10, 16.6 |
+| **Auth** | Jose (JWT), bcryptjs | 6.1, 3.0 |
+| **Testing** | Vitest | 2.1 |
+| **Linting** | ESLint, Prettier, TypeScript | ESLint 10.1, Prettier 3.6 |
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+
 - pnpm
+
+#### Installing pnpm
+
+If you don't have pnpm installed, you can install it globally:
+
+```bash
+# Using npm
+npm install -g pnpm
+
+# Using Homebrew (macOS)
+brew install pnpm
+
+# Using Scoop (Windows)
+scoop install pnpm
+
+# Using yarn
+yarn global add pnpm
+```
+
+Verify the installation:
+
+```bash
+pnpm --version
+```
 
 ### Installation
 
@@ -83,7 +114,11 @@ scripts/
   migrate.mjs       # Database migration runner
 ```
 
-## Database Schema
+## Database
+
+**Architecture:** Turso (LibSQL) with Drizzle ORM for data access layer and migrations.
+
+### Schema
 
 ```
 users       — id, openId, name, email, role, ...
@@ -92,16 +127,19 @@ tasks       — id, title, description, status, priority, dueDate, position, pro
 comments    — id, content, taskId, authorId, ...
 ```
 
-## Deploying
+## Deployment
 
-This project uses SQLite, making it straightforward to deploy on platforms like:
+**Database:** This project uses Turso (managed LibSQL), so there's no need to manage SQLite files in production.
 
-- **Vercel** (with persistent storage via Vercel KV or a mounted volume)
-- **Railway** (with a persistent volume for the SQLite file)
-- **Fly.io** (with a volume mount)
-- **Render** (with a disk)
+Deploy to serverless platforms:
 
-> **Note:** For production, ensure the SQLite database file is stored on a persistent volume and not in the ephemeral filesystem.
+- **Vercel** — Connect to Turso database, deploy as Vercel Functions
+- **Railway** — Easy database connection via environment variables
+- **Fly.io** — Deploy container with env vars pointing to Turso
+- **Render** — Similar to Railway, supports serverless Node deployments
+
+**Environment Setup:**
+Ensure `TURSO_CONNECTION_URL` and `TURSO_AUTH_TOKEN` are configured in your deployment platform.
 
 ## License
 
