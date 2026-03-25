@@ -35,7 +35,7 @@ A clean, focused Kanban task management application built with React, tRPC, and 
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22.12+
 - pnpm
 
 #### Installing pnpm
@@ -139,7 +139,7 @@ Deploy to serverless platforms:
 - **Render** — Similar to Railway, supports serverless Node deployments
 
 **Environment Setup:**
-Ensure `TURSO_CONNECTION_URL` and `TURSO_AUTH_TOKEN` are configured in your deployment platform.
+Ensure `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` are configured in your deployment platform.
 
 ## License
 

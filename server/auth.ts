@@ -1,10 +1,15 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
-import type { Request } from "express";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "../shared/const";
 import { ENV } from "./_core/env";
 import { getUserById } from "./db";
 import type { User } from "../drizzle/schema";
+
+type RequestLike = {
+  headers?: {
+    cookie?: string;
+  };
+};
 
 const BCRYPT_ROUNDS = 12;
 
@@ -44,10 +49,11 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function authenticateRequest(req: Request): Promise<User | null> {
-  const raw = req.headers.cookie ?? "";
+export async function authenticateRequest(req: RequestLike): Promise<User | null> {
+  const raw = req.headers?.cookie ?? "";
+
   const cookies = Object.fromEntries(
-    raw.split(";").map((c) => {
+    raw.split(";").map((c: string) => {
       const [k, ...v] = c.trim().split("=");
       return [k?.trim() ?? "", v.join("=")];
     })

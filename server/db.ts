@@ -10,8 +10,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export function getDb() {
   if (_db) return _db;
 
-  const url = process.env.TURSO_DATABASE_URL ?? ":memory:";
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const url = ENV.databaseUrl.trim() || ":memory:";
+  const authToken = ENV.tursoAuthToken.trim();
 
   const client = createClient(
     url === ":memory:"

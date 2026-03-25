@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -28,6 +28,25 @@ import {
   getAllUsers,
 } from "./db";
 import { hashPassword, verifyPassword, signSession } from "./auth";
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label}_TIMEOUT`)), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+type ResponseWithCookies = {
+  cookie?: (name: string, value: string, options?: Record<string, unknown>) => void;
+  clearCookie?: (name: string, options?: Record<string, unknown>) => void;
+};
 
 // ─── Projects Router ──────────────────────────────────────────────────────────
 
@@ -243,7 +262,11 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const existing = await getUserByEmail(input.email);
+        const existing = await withTimeout(
+          getUserByEmail(input.email),
+          4000,
+          "REGISTER_GET_USER"
+        );
         if (existing) {
           throw new TRPCError({
             code: "CONFLICT",
@@ -251,14 +274,19 @@ export const appRouter = router({
           });
         }
         const passwordHash = await hashPassword(input.password);
-        const user = await createLocalUser({
+        const user = await withTimeout(
+          createLocalUser({
           name: input.name,
           email: input.email,
           passwordHash,
-        });
+          }),
+          4000,
+          "REGISTER_CREATE_USER"
+        );
         const token = await signSession(user.id);
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, {
+        const res = ctx.res as unknown as ResponseWithCookies | undefined;
+        res?.cookie?.(COOKIE_NAME, token, {
           ...cookieOptions,
           maxAge: 365 * 24 * 60 * 60 * 1000,
         });
@@ -276,7 +304,11 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
-        const user = await getUserByEmail(input.email);
+        const user = await withTimeout(
+          getUserByEmail(input.email),
+          4000,
+          "LOGIN_GET_USER"
+        );
         if (!user || !user.passwordHash) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
@@ -292,7 +324,8 @@ export const appRouter = router({
         }
         const token = await signSession(user.id);
         const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, {
+        const res = ctx.res as unknown as ResponseWithCookies | undefined;
+        res?.cookie?.(COOKIE_NAME, token, {
           ...cookieOptions,
           maxAge: 365 * 24 * 60 * 60 * 1000,
         });
@@ -304,7 +337,8 @@ export const appRouter = router({
 
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      const res = ctx.res as unknown as ResponseWithCookies | undefined;
+      res?.clearCookie?.(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
 
@@ -317,7 +351,11 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        const user = await getUserById(ctx.user.id);
+        const user = await withTimeout(
+          getUserById(ctx.user.id),
+          4000,
+          "PROFILE_GET_USER"
+        );
         if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 
         const updateData: Partial<{ name: string; passwordHash: string }> = {};
@@ -342,7 +380,11 @@ export const appRouter = router({
           return { success: true, user };
         }
 
-        const updated = await updateUser(ctx.user.id, updateData);
+        const updated = await withTimeout(
+          updateUser(ctx.user.id, updateData),
+          4000,
+          "PROFILE_UPDATE_USER"
+        );
         return { success: true, user: updated };
       }),
   }),

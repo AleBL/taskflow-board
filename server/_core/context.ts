@@ -1,27 +1,40 @@
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Request, Response } from "express";
 import type { User } from "../../drizzle/schema";
 import { authenticateRequest } from "../auth";
 
 export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
+  req: Request;
+  res: Response;
   user: User | null;
 };
 
-export async function createContext(
-  opts: CreateExpressContextOptions
-): Promise<TrpcContext> {
-  let user: User | null = null;
-
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
   try {
-    user = await authenticateRequest(opts.req);
-  } catch {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("AUTH_CONTEXT_TIMEOUT")), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+export async function createContext({
+  req,
+  res,
+}: {
+  req: Request;
+  res: Response;
+}): Promise<TrpcContext> {
+  let user: User | null = null;
+  try {
+    user = await withTimeout(authenticateRequest(req), 1500);
+  } catch (error) {
+    console.warn("[Auth] Context auth skipped:", String(error));
     user = null;
   }
-
-  return {
-    req: opts.req,
-    res: opts.res,
-    user,
-  };
+  return { req, res, user };
 }

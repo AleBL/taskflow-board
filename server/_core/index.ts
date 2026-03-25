@@ -41,6 +41,10 @@ async function startServer() {
     })
   );
 
+  app.get("/api/ping", (_req, res) => {
+    res.status(200).json({ ok: true, ts: Date.now() });
+  });
+
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
