@@ -70,9 +70,18 @@
     "subheadline": "TaskFlow é um quadro Kanban limpo e focado para gerenciar projetos e tarefas. Arraste, solte e faça acontecer.",
     "getStartedFree": "Comece gratuitamente",
     "features": {
-      "kanban": { "title": "Quadros Kanban", "desc": "Visualize seu fluxo de trabalho com colunas de arrastar e soltar" },
-      "tracking": { "title": "Rastreamento de Tarefas", "desc": "Prioridades, prazos e comentários em cada tarefa" },
-      "dashboard": { "title": "Painel", "desc": "Veja todas as suas métricas de uma vez" }
+      "kanban": {
+        "title": "Quadros Kanban",
+        "desc": "Visualize seu fluxo de trabalho com colunas de arrastar e soltar"
+      },
+      "tracking": {
+        "title": "Rastreamento de Tarefas",
+        "desc": "Prioridades, prazos e comentários em cada tarefa"
+      },
+      "dashboard": {
+        "title": "Painel",
+        "desc": "Veja todas as suas métricas de uma vez"
+      }
     }
   },
   "dashboard": {
@@ -108,7 +117,8 @@
     "namePlaceholder": "ex: Redesign do Site",
     "descriptionPlaceholder": "Sobre o que é este projeto?",
     "viewBoard": "Ver Quadro",
-    "lastUpdated": "Última atualização"
+    "lastUpdated": "Última atualização",
+    "createdOn": "Criado em {{date}}"
   },
   "board": {
     "title": "Quadro",
@@ -203,5 +213,38 @@
     "post": "Publicar",
     "noComments": "Nenhum comentário ainda",
     "deleteComment": "Excluir comentário"
+  },
+  "demo": {
+    "cta": "Ver demonstração ao vivo",
+    "ctaHint": "Sem cadastro, pronto em segundos",
+    "preparing": "Preparando seu ambiente de demonstração...",
+    "preparingHint": "Criando projetos, tarefas e colegas de exemplo só para você.",
+    "failed": "Não foi possível iniciar a demonstração",
+    "retry": "Tentar novamente",
+    "backHome": "Voltar ao início",
+    "bannerTitle": "Modo demonstração",
+    "bannerText": "Ambiente temporário, apagado após 24 horas. Fique à vontade para arrastar, editar e excluir.",
+    "createAccount": "Criar minha conta",
+    "or": "ou",
+    "explore": "Explorar a demonstração sem cadastro"
+  },
+  "members": {
+    "title": "Membros",
+    "manage": "Gerenciar membros",
+    "inviteLabel": "Convidar por e-mail",
+    "invitePlaceholder": "colega@exemplo.com",
+    "invite": "Convidar",
+    "invited": "Membro adicionado",
+    "removed": "Membro removido",
+    "remove": "Remover",
+    "owner": "Dono",
+    "member": "Membro",
+    "userNotFound": "Nenhuma conta encontrada com este e-mail",
+    "alreadyMember": "Este usuário já é membro",
+    "demoDisabled": "Convidar pessoas reais está desativado no modo demonstração",
+    "ownerOnly": "Apenas o dono do projeto pode gerenciar membros"
+  },
+  "errors": {
+    "tooManyRequests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
   }
 }

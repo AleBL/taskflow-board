@@ -27,25 +27,33 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "@/components/TaskCard";
 import { useTranslation } from "react-i18next";
+import { useSearch } from "wouter";
+import { isTaskOverdue } from "@shared/dates";
 
 const STATUS_CONFIG = {
-  todo: { label: "To Do", icon: Circle, color: "text-slate-500" },
-  in_progress: { label: "In Progress", icon: Clock, color: "text-amber-500" },
-  done: { label: "Done", icon: CheckCircle2, color: "text-emerald-500" },
+  todo: { icon: Circle, color: "text-slate-500" },
+  in_progress: { icon: Clock, color: "text-amber-500" },
+  done: { icon: CheckCircle2, color: "text-emerald-500" },
 };
 
 const PRIORITY_CONFIG = {
-  low: { label: "Low", className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  medium: { label: "Medium", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
-  high: { label: "High", className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
+  low: { className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  medium: { className: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400" },
+  high: { className: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" },
 };
+
+const STATUS_FILTERS = ["all", "todo", "in_progress", "done", "overdue"] as const;
 
 export default function TaskSearch() {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const searchParams = useSearch();
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(searchParams).get("status");
+    return STATUS_FILTERS.includes(fromUrl as (typeof STATUS_FILTERS)[number]) ? fromUrl! : "all";
+  });
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
 
@@ -58,9 +66,10 @@ export default function TaskSearch() {
     () => ({
       search: search || undefined,
       status:
-        statusFilter !== "all"
+        statusFilter !== "all" && statusFilter !== "overdue"
           ? (statusFilter as "todo" | "in_progress" | "done")
           : undefined,
+      overdue: statusFilter === "overdue" ? true : undefined,
       priority:
         priorityFilter !== "all"
           ? (priorityFilter as "low" | "medium" | "high")
@@ -129,6 +138,7 @@ export default function TaskSearch() {
               <SelectItem value="todo">{t("tasks.statusTodo")}</SelectItem>
               <SelectItem value="in_progress">{t("tasks.statusInProgress")}</SelectItem>
               <SelectItem value="done">{t("tasks.statusDone")}</SelectItem>
+              <SelectItem value="overdue">{t("tasks.overdue")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -189,10 +199,7 @@ export default function TaskSearch() {
             {tasks.map((task) => {
               const statusCfg = STATUS_CONFIG[task.status as keyof typeof STATUS_CONFIG];
               const priorityCfg = PRIORITY_CONFIG[task.priority as keyof typeof PRIORITY_CONFIG];
-              const isOverdue =
-                task.dueDate &&
-                new Date(task.dueDate) < new Date() &&
-                task.status !== "done";
+              const isOverdue = isTaskOverdue(task);
               const project = projectMap[task.projectId];
 
               return (
@@ -200,6 +207,7 @@ export default function TaskSearch() {
                   <CardContent className="flex items-center gap-4 py-3 px-4">
                     <statusCfg.icon
                       className={`h-4 w-4 shrink-0 ${statusCfg.color}`}
+                      aria-label={t(`tasks.statuses.${task.status}`)}
                     />
 
                     <div className="flex-1 min-w-0">
@@ -210,7 +218,7 @@ export default function TaskSearch() {
                         <span
                           className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${priorityCfg.className}`}
                         >
-                          {priorityCfg.label}
+                          {t(`tasks.priorities.${task.priority}`)}
                         </span>
                         {isOverdue && (
                           <span className="inline-flex items-center gap-1 text-xs text-destructive font-medium">

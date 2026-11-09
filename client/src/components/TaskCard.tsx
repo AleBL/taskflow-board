@@ -3,6 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { AlertTriangle, Calendar, GripVertical, MessageSquare, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { isTaskOverdue } from "@shared/dates";
 
 export type TaskStatus = "todo" | "in_progress" | "done";
 export type TaskPriority = "low" | "medium" | "high";
@@ -52,10 +53,7 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
     opacity: isDragging ? 0.4 : 1,
   };
 
-  const isOverdue =
-    task.dueDate &&
-    new Date(task.dueDate) < new Date() &&
-    task.status !== "done";
+  const isOverdue = isTaskOverdue(task);
 
   const priorityClass = PRIORITY_CLASS[task.priority as TaskPriority] ?? PRIORITY_CLASS.medium;
   const priorityLabel = t(`tasks.priorities.${task.priority}`);

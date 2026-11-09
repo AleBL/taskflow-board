@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Kanban, FolderKanban, Search, UserCircle } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Kanban, FolderKanban, Search, Sparkles, UserCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -108,7 +108,7 @@ function DashboardLayoutContent({
   setSidebarWidth,
 }: DashboardLayoutContentProps) {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, isDemo } = useAuth();
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -229,7 +229,7 @@ function DashboardLayoutContent({
                       {user?.name || "-"}
                     </p>
                     <p className="text-xs text-muted-foreground truncate mt-1.5">
-                      {user?.email || "-"}
+                      {isDemo ? t("demo.bannerTitle") : user?.email || "-"}
                     </p>
                   </div>
                 </button>
@@ -264,6 +264,24 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
+        {isDemo && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-primary/20 bg-primary/10 px-4 py-2 text-sm">
+            <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+            <span className="font-medium text-foreground">{t("demo.bannerTitle")}</span>
+            <span className="text-muted-foreground flex-1 min-w-[200px]">{t("demo.bannerText")}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7"
+              onClick={async () => {
+                await logout();
+                setLocation("/register");
+              }}
+            >
+              {t("demo.createAccount")}
+            </Button>
+          </div>
+        )}
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
             <div className="flex items-center gap-2">

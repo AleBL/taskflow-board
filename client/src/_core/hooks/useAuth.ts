@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { DEMO_LOGIN_METHOD } from "@shared/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -41,24 +42,22 @@ export function useAuth(options?: UseAuthOptions) {
     }
   }, [logoutMutation, utils]);
 
-  const state = useMemo(() => {
-    localStorage.setItem(
-      "runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
-    return {
+  const state = useMemo(
+    () => ({
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
-    };
-  }, [
-    meQuery.data,
-    meQuery.error,
-    meQuery.isLoading,
-    logoutMutation.error,
-    logoutMutation.isPending,
-  ]);
+      isDemo: meQuery.data?.loginMethod === DEMO_LOGIN_METHOD,
+    }),
+    [
+      meQuery.data,
+      meQuery.error,
+      meQuery.isLoading,
+      logoutMutation.error,
+      logoutMutation.isPending,
+    ]
+  );
 
   useEffect(() => {
     if (!redirectOnUnauthenticated) return;

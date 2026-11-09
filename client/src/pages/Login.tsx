@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { trpc } from "@/lib/trpc";
-import { Loader2, LayoutDashboard } from "lucide-react";
+import { Loader2, Kanban, PlayCircle } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
@@ -25,7 +25,13 @@ export default function Login() {
       navigate("/dashboard");
     },
     onError: (e) => {
-      toast.error(e.message);
+      toast.error(
+        e.data?.code === "TOO_MANY_REQUESTS"
+          ? t("errors.tooManyRequests")
+          : e.data?.code === "UNAUTHORIZED"
+            ? t("auth.invalidCredentials")
+            : t("common.error")
+      );
     },
   });
 
@@ -47,11 +53,10 @@ export default function Login() {
         <div className="flex flex-col items-center gap-2 text-center">
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
-              <LayoutDashboard className="h-5 w-5 text-primary-foreground" />
+              <Kanban className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-2xl font-bold text-foreground">TaskFlow</span>
           </div>
-          <p className="text-sm text-muted-foreground">{t("auth.enterCredentials")}</p>
         </div>
 
         <Card>
@@ -99,6 +104,19 @@ export default function Login() {
             </form>
           </CardContent>
         </Card>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-border" />
+          <span className="text-xs uppercase text-muted-foreground">{t("demo.or")}</span>
+          <div className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button variant="outline" className="w-full" asChild>
+          <Link href="/demo">
+            <PlayCircle className="h-4 w-4 mr-2" />
+            {t("demo.explore")}
+          </Link>
+        </Button>
 
         <p className="text-center text-sm text-muted-foreground">
           {t("auth.dontHaveAccount")}{" "}

@@ -70,9 +70,18 @@
     "subheadline": "TaskFlow is a clean, focused Kanban board for managing projects and tasks. Drag, drop, and get things done.",
     "getStartedFree": "Get started free",
     "features": {
-      "kanban": { "title": "Kanban Boards", "desc": "Visualize your workflow with drag-and-drop columns" },
-      "tracking": { "title": "Task Tracking", "desc": "Priorities, due dates, and comments on every task" },
-      "dashboard": { "title": "Dashboard", "desc": "See all your metrics at a glance" }
+      "kanban": {
+        "title": "Kanban Boards",
+        "desc": "Visualize your workflow with drag-and-drop columns"
+      },
+      "tracking": {
+        "title": "Task Tracking",
+        "desc": "Priorities, due dates, and comments on every task"
+      },
+      "dashboard": {
+        "title": "Dashboard",
+        "desc": "See all your metrics at a glance"
+      }
     }
   },
   "dashboard": {
@@ -108,7 +117,8 @@
     "namePlaceholder": "e.g. Website Redesign",
     "descriptionPlaceholder": "What is this project about?",
     "viewBoard": "View Board",
-    "lastUpdated": "Last updated"
+    "lastUpdated": "Last updated",
+    "createdOn": "Created {{date}}"
   },
   "board": {
     "title": "Board",
@@ -203,5 +213,38 @@
     "post": "Post",
     "noComments": "No comments yet",
     "deleteComment": "Delete comment"
+  },
+  "demo": {
+    "cta": "Try the live demo",
+    "ctaHint": "No sign-up needed, ready in seconds",
+    "preparing": "Preparing your demo workspace...",
+    "preparingHint": "Creating sample projects, tasks and teammates just for you.",
+    "failed": "Could not start the demo",
+    "retry": "Try again",
+    "backHome": "Back to home",
+    "bannerTitle": "Demo mode",
+    "bannerText": "Temporary workspace, deleted after 24 hours. Feel free to drag, edit and delete anything.",
+    "createAccount": "Create your account",
+    "or": "or",
+    "explore": "Explore the demo without signing up"
+  },
+  "members": {
+    "title": "Members",
+    "manage": "Manage members",
+    "inviteLabel": "Invite by email",
+    "invitePlaceholder": "teammate@example.com",
+    "invite": "Invite",
+    "invited": "Member added",
+    "removed": "Member removed",
+    "remove": "Remove",
+    "owner": "Owner",
+    "member": "Member",
+    "userNotFound": "No account found with this email",
+    "alreadyMember": "This user is already a member",
+    "demoDisabled": "Inviting real people is disabled in demo mode",
+    "ownerOnly": "Only the project owner can manage members"
+  },
+  "errors": {
+    "tooManyRequests": "Too many attempts. Please wait a few minutes and try again."
   }
 }

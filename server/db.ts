@@ -1,9 +1,10 @@
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
-import { eq, and, like, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, like, desc, asc, inArray, lte, ne, isNotNull } from "drizzle-orm";
 import { users, projects, tasks, comments, projectMembers } from "../drizzle/schema";
 import type { InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { DAY_MS, isTaskOverdue } from "../shared/dates";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -129,15 +130,6 @@ export async function createLocalUser(data: {
   return result[0]!;
 }
 
-export async function getAllUsers() {
-  const db = getDb();
-  return db
-    .select({ id: users.id, name: users.name, email: users.email })
-    .from(users)
-    .orderBy(asc(users.name))
-    .all();
-}
-
 export async function getProjectMembersList(projectId: number) {
   const db = getDb();
   return db
@@ -167,20 +159,24 @@ export async function isProjectMember(projectId: number, userId: number): Promis
 
 export async function addProjectMember(projectId: number, userId: number, role: "owner" | "member" = "member") {
   const db = getDb();
-  const existing = await db
-    .select({ id: projectMembers.id })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
-    .get();
+  await db
+    .insert(projectMembers)
+    .values({ projectId, userId, role, joinedAt: new Date() })
+    // No explicit target: still valid if migration 0003 (unique index) has not run yet.
+    .onConflictDoNothing();
+}
 
-  if (!existing) {
-    await db.insert(projectMembers).values({
-      projectId,
-      userId,
-      role,
-      joinedAt: new Date(),
-    });
-  }
+export async function removeProjectMember(projectId: number, userId: number) {
+  const db = getDb();
+  await db
+    .update(tasks)
+    .set({ assigneeId: null, updatedAt: new Date() })
+    .where(and(eq(tasks.projectId, projectId), eq(tasks.assigneeId, userId)));
+  const result = await db
+    .delete(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .returning();
+  return result[0] ?? null;
 }
 
 export async function getAccessibleProjectIds(userId: number): Promise<number[]> {
@@ -283,6 +279,7 @@ export async function searchTasks(params: {
   status?: "todo" | "in_progress" | "done";
   priority?: "low" | "medium" | "high";
   projectId?: number;
+  overdue?: boolean;
 }) {
   const db = getDb();
 
@@ -294,6 +291,9 @@ export async function searchTasks(params: {
     params.status ? eq(tasks.status, params.status) : undefined,
     params.priority ? eq(tasks.priority, params.priority) : undefined,
     params.projectId ? eq(tasks.projectId, params.projectId) : undefined,
+    params.overdue ? ne(tasks.status, "done") : undefined,
+    params.overdue ? isNotNull(tasks.dueDate) : undefined,
+    params.overdue ? lte(tasks.dueDate, new Date(Date.now() - DAY_MS)) : undefined,
     inArray(tasks.projectId, accessibleIds),
   ].filter(Boolean);
 
@@ -333,13 +333,7 @@ export async function createTask(data: {
     .values({ ...data, position, createdAt: now, updatedAt: now })
     .returning();
 
-  const task = result[0]!;
-
-  if (data.assigneeId) {
-    await addProjectMember(data.projectId, data.assigneeId, "member");
-  }
-
-  return task;
+  return result[0]!;
 }
 
 export async function updateTask(
@@ -375,13 +369,7 @@ export async function updateTask(
     .where(eq(tasks.id, id))
     .returning();
 
-  const task = result[0] ?? null;
-
-  if (task && data.assigneeId) {
-    await addProjectMember(task.projectId, data.assigneeId, "member");
-  }
-
-  return task;
+  return result[0] ?? null;
 }
 
 export async function deleteTask(id: number) {
@@ -456,7 +444,7 @@ export async function getDashboardMetrics(userId: number) {
     .where(inArray(tasks.projectId, accessibleIds))
     .all();
 
-  const now = new Date();
+  const now = Date.now();
   let todo = 0, inProgress = 0, done = 0, overdue = 0;
 
   for (const task of allTasks) {
@@ -464,9 +452,7 @@ export async function getDashboardMetrics(userId: number) {
     else if (task.status === "in_progress") inProgress++;
     else if (task.status === "done") done++;
 
-    if (task.dueDate && task.dueDate < now && task.status !== "done") {
-      overdue++;
-    }
+    if (isTaskOverdue(task, now)) overdue++;
   }
 
   return { totalProjects, total: allTasks.length, todo, inProgress, done, overdue };

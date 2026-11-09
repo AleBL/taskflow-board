@@ -1,6 +1,11 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { TaskCard, type Task } from "@/components/TaskCard";
 import { TaskModal } from "@/components/TaskModal";
+import {
+  ProjectMembersDialog,
+  memberColor,
+  memberInitials,
+} from "@/components/ProjectMembersDialog";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
@@ -139,14 +144,34 @@ export default function ProjectDetail() {
   const { data: allTasks = [], isLoading: tasksLoading } =
     trpc.tasks.listByProject.useQuery({ projectId });
 
-  const updateStatusMutation = trpc.tasks.update.useMutation({
-    onSuccess: () => {
+  // Optimistic: the card lands in the new column immediately; rolled back on error.
+  const updateStatusMutation = trpc.tasks.updateStatus.useMutation({
+    onMutate: async ({ id, status, position }) => {
+      await utils.tasks.listByProject.cancel({ projectId });
+      const previous = utils.tasks.listByProject.getData({ projectId });
+      utils.tasks.listByProject.setData({ projectId }, (old) =>
+        old?.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                status,
+                position: position ?? task.position,
+                completedAt: status === "done" ? new Date() : null,
+              }
+            : task
+        )
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        utils.tasks.listByProject.setData({ projectId }, context.previous);
+      }
+      toast.error(t("common.error"));
+    },
+    onSettled: () => {
       utils.tasks.listByProject.invalidate({ projectId });
       utils.dashboard.metrics.invalidate();
-    },
-    onError: (e) => {
-      toast.error(e.message);
-      utils.tasks.listByProject.invalidate({ projectId });
     },
   });
 
@@ -162,8 +187,8 @@ export default function ProjectDetail() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [defaultStatus, setDefaultStatus] = useState<Status>("todo");
+  const [membersOpen, setMembersOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
@@ -213,10 +238,15 @@ export default function ProjectDetail() {
       }
 
       if (newStatus && draggedTask.status !== newStatus) {
-        updateStatusMutation.mutate({ id: activeId, status: newStatus });
+        const lastPosition = Math.max(-1, ...tasksByStatus[newStatus].map((t) => t.position));
+        updateStatusMutation.mutate({
+          id: activeId,
+          status: newStatus,
+          position: lastPosition + 1,
+        });
       }
     },
-    [allTasks, updateStatusMutation]
+    [allTasks, tasksByStatus, updateStatusMutation]
   );
 
   function openCreateModal(status: Status) {
@@ -285,32 +315,38 @@ export default function ProjectDetail() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-3">
-            {members.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <div className="flex -space-x-2">
-                  {members.slice(0, 5).map((m) => (
-                    <Tooltip key={m.id}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="h-7 w-7 border-2 border-background cursor-default">
-                          <AvatarFallback className="text-xs" style={{ backgroundColor: `hsl(${(m.id * 47) % 360}, 60%, 45%)`, color: "white" }}>
-                            {(m.name ?? m.email ?? "?").slice(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>{m.name ?? m.email}</TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {members.length > 5 && (
-                    <Avatar className="h-7 w-7 border-2 border-background">
-                      <AvatarFallback className="text-xs bg-muted text-muted-foreground">
-                        +{members.length - 5}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                </div>
+            <button
+              type="button"
+              onClick={() => setMembersOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={t("members.manage")}
+            >
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <div className="flex -space-x-2">
+                {members.slice(0, 5).map((m) => (
+                  <Tooltip key={m.id}>
+                    <TooltipTrigger asChild>
+                      <Avatar className="h-7 w-7 border-2 border-background">
+                        <AvatarFallback
+                          className="text-xs text-white"
+                          style={{ backgroundColor: memberColor(m.id) }}
+                        >
+                          {memberInitials(m)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>{m.name ?? m.email}</TooltipContent>
+                  </Tooltip>
+                ))}
+                {members.length > 5 && (
+                  <Avatar className="h-7 w-7 border-2 border-background">
+                    <AvatarFallback className="text-xs bg-muted text-muted-foreground">
+                      +{members.length - 5}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
               </div>
-            )}
+            </button>
             <Button onClick={() => openCreateModal("todo")}>
               <Plus className="h-4 w-4 mr-2" />
               {t("tasks.addTask")}
@@ -362,6 +398,15 @@ export default function ProjectDetail() {
         }}
         projectId={projectId}
         task={editingTask}
+        defaultStatus={defaultStatus}
+      />
+
+      <ProjectMembersDialog
+        open={membersOpen}
+        onOpenChange={setMembersOpen}
+        projectId={projectId}
+        ownerId={project.ownerId}
+        members={members}
       />
     </DashboardLayout>
   );

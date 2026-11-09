@@ -66,7 +66,7 @@ export default function Dashboard() {
           duration: 6000,
           action: {
             label: t("nav.view"),
-            onClick: () => navigate("/tasks"),
+            onClick: () => navigate("/tasks?status=overdue"),
           },
         }
       );
@@ -137,7 +137,7 @@ export default function Dashboard() {
                   {metrics?.overdue} {t("dashboard.overdue").toLowerCase()}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {t("tasks.adjustFilters")}
+                  {t("dashboard.overdueToastDesc")}
                 </p>
               </div>
               <Button
@@ -146,8 +146,8 @@ export default function Dashboard() {
                 className="ml-auto"
                 onClick={() => navigate("/tasks?status=overdue")}
               >
-              {t("projects.viewBoard")}
-            </Button>
+                {t("nav.view")}
+              </Button>
             </CardContent>
           </Card>
         )}

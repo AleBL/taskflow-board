@@ -1,8 +1,10 @@
 import {
+  index,
   integer,
   sqliteTable,
   text,
   real,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
@@ -78,7 +80,14 @@ export const tasks = sqliteTable("tasks", {
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (table) => [
+  index("tasks_project_status_position_idx").on(
+    table.projectId,
+    table.status,
+    table.position
+  ),
+  index("tasks_assignee_idx").on(table.assigneeId),
+]);
 
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
@@ -99,7 +108,13 @@ export const projectMembers = sqliteTable("project_members", {
   joinedAt: integer("joinedAt", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (table) => [
+  uniqueIndex("project_members_project_user_unique").on(
+    table.projectId,
+    table.userId
+  ),
+  index("project_members_user_idx").on(table.userId),
+]);
 
 export type ProjectMember = typeof projectMembers.$inferSelect;
 export type InsertProjectMember = typeof projectMembers.$inferInsert;
@@ -121,7 +136,15 @@ export const comments = sqliteTable("comments", {
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
-});
+}, (table) => [index("comments_task_idx").on(table.taskId)]);
 
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = typeof comments.$inferInsert;
+
+// ─── Rate Limits ─────────────────────────────────────────────────────────────
+
+export const rateLimits = sqliteTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  windowStart: integer("windowStart").notNull(),
+});

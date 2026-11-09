@@ -22,12 +22,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "./TaskCard";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { fromDateInputValue, toDateInputValue } from "@shared/dates";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   projectId: number;
   task?: Task | null;
+  defaultStatus?: TaskForm["status"];
 };
 
 type TaskForm = {
@@ -48,9 +51,10 @@ const defaultForm: TaskForm = {
   assigneeId: "none",
 };
 
-export function TaskModal({ open, onClose, projectId, task }: Props) {
+export function TaskModal({ open, onClose, projectId, task, defaultStatus = "todo" }: Props) {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
+  const { user } = useAuth();
 
   const [form, setForm] = useState<TaskForm>(() =>
     task
@@ -59,12 +63,10 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
           description: task.description ?? "",
           status: task.status,
           priority: task.priority,
-          dueDate: task.dueDate
-            ? new Date(task.dueDate).toISOString().split("T")[0]
-            : "",
+          dueDate: toDateInputValue(task.dueDate),
           assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
         }
-      : defaultForm
+      : { ...defaultForm, status: defaultStatus }
   );
 
   const [comment, setComment] = useState("");
@@ -76,19 +78,17 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
         description: task.description ?? "",
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate
-          ? new Date(task.dueDate).toISOString().split("T")[0]
-          : "",
+        dueDate: toDateInputValue(task.dueDate),
         assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
       });
     } else if (open) {
-      setForm(defaultForm);
+      setForm({ ...defaultForm, status: defaultStatus });
     }
-  }, [task, open]);
+  }, [task, open, defaultStatus]);
 
-  const { data: members } = trpc.users.list.useQuery(
-    undefined,
-    { enabled: open }
+  const { data: members } = trpc.tasks.members.useQuery(
+    { projectId },
+    { enabled: open && projectId > 0 }
   );
 
   const { data: comments } = trpc.comments.listByTask.useQuery(
@@ -109,6 +109,8 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
   const updateMutation = trpc.tasks.update.useMutation({
     onSuccess: () => {
       utils.tasks.listByProject.invalidate({ projectId });
+      utils.tasks.search.invalidate();
+      utils.dashboard.metrics.invalidate();
       onClose();
       toast.success(t("common.success"));
     },
@@ -144,7 +146,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
       description: form.description || undefined,
       status: form.status,
       priority: form.priority,
-      dueDate: form.dueDate ? new Date(form.dueDate).getTime() : null,
+      dueDate: fromDateInputValue(form.dueDate),
       assigneeId,
     };
 
@@ -292,14 +294,17 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
                       {new Date(c.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive shrink-0"
-                    onClick={() => deleteCommentMutation.mutate({ id: c.id })}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {c.authorId === user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("comments.deleteComment")}
+                      className="h-7 w-7 opacity-60 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => deleteCommentMutation.mutate({ id: c.id })}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               ))}
               {comments?.length === 0 && (
