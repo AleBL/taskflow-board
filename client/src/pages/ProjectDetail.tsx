@@ -144,14 +144,34 @@ export default function ProjectDetail() {
   const { data: allTasks = [], isLoading: tasksLoading } =
     trpc.tasks.listByProject.useQuery({ projectId });
 
-  const updateStatusMutation = trpc.tasks.update.useMutation({
-    onSuccess: () => {
+  // Optimistic: the card lands in the new column immediately; rolled back on error.
+  const updateStatusMutation = trpc.tasks.updateStatus.useMutation({
+    onMutate: async ({ id, status, position }) => {
+      await utils.tasks.listByProject.cancel({ projectId });
+      const previous = utils.tasks.listByProject.getData({ projectId });
+      utils.tasks.listByProject.setData({ projectId }, (old) =>
+        old?.map((task) =>
+          task.id === id
+            ? {
+                ...task,
+                status,
+                position: position ?? task.position,
+                completedAt: status === "done" ? new Date() : null,
+              }
+            : task
+        )
+      );
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) {
+        utils.tasks.listByProject.setData({ projectId }, context.previous);
+      }
+      toast.error(t("common.error"));
+    },
+    onSettled: () => {
       utils.tasks.listByProject.invalidate({ projectId });
       utils.dashboard.metrics.invalidate();
-    },
-    onError: (e) => {
-      toast.error(e.message);
-      utils.tasks.listByProject.invalidate({ projectId });
     },
   });
 
@@ -167,7 +187,6 @@ export default function ProjectDetail() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [defaultStatus, setDefaultStatus] = useState<Status>("todo");
   const [membersOpen, setMembersOpen] = useState(false);
 
@@ -219,10 +238,15 @@ export default function ProjectDetail() {
       }
 
       if (newStatus && draggedTask.status !== newStatus) {
-        updateStatusMutation.mutate({ id: activeId, status: newStatus });
+        const lastPosition = Math.max(-1, ...tasksByStatus[newStatus].map((t) => t.position));
+        updateStatusMutation.mutate({
+          id: activeId,
+          status: newStatus,
+          position: lastPosition + 1,
+        });
       }
     },
-    [allTasks, updateStatusMutation]
+    [allTasks, tasksByStatus, updateStatusMutation]
   );
 
   function openCreateModal(status: Status) {
@@ -374,6 +398,7 @@ export default function ProjectDetail() {
         }}
         projectId={projectId}
         task={editingTask}
+        defaultStatus={defaultStatus}
       />
 
       <ProjectMembersDialog

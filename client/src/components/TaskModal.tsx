@@ -30,6 +30,7 @@ type Props = {
   onClose: () => void;
   projectId: number;
   task?: Task | null;
+  defaultStatus?: TaskForm["status"];
 };
 
 type TaskForm = {
@@ -50,7 +51,7 @@ const defaultForm: TaskForm = {
   assigneeId: "none",
 };
 
-export function TaskModal({ open, onClose, projectId, task }: Props) {
+export function TaskModal({ open, onClose, projectId, task, defaultStatus = "todo" }: Props) {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
   const { user } = useAuth();
@@ -65,7 +66,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
           dueDate: toDateInputValue(task.dueDate),
           assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
         }
-      : defaultForm
+      : { ...defaultForm, status: defaultStatus }
   );
 
   const [comment, setComment] = useState("");
@@ -81,9 +82,9 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
         assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
       });
     } else if (open) {
-      setForm(defaultForm);
+      setForm({ ...defaultForm, status: defaultStatus });
     }
-  }, [task, open]);
+  }, [task, open, defaultStatus]);
 
   const { data: members } = trpc.tasks.members.useQuery(
     { projectId },
@@ -108,6 +109,8 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
   const updateMutation = trpc.tasks.update.useMutation({
     onSuccess: () => {
       utils.tasks.listByProject.invalidate({ projectId });
+      utils.tasks.search.invalidate();
+      utils.dashboard.metrics.invalidate();
       onClose();
       toast.success(t("common.success"));
     },
