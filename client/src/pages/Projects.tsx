@@ -51,7 +51,7 @@ const defaultForm: ProjectForm = {
 };
 
 export default function Projects() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
   const { user } = useAuth();
@@ -219,7 +219,7 @@ export default function Projects() {
                     {project.description || t("common.none")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-3">
-                    {t("projects.createdOn", { date: new Date(project.createdAt).toLocaleDateString() })}
+                    {t("projects.createdOn", { date: new Date(project.createdAt).toLocaleDateString(i18n.resolvedLanguage) })}
                   </p>
                 </CardContent>
               </Card>

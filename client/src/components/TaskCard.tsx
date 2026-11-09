@@ -37,7 +37,7 @@ type Props = {
 };
 
 export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const {
     attributes,
     listeners,
@@ -108,7 +108,7 @@ export function TaskCard({ task, commentCount = 0, onEdit, onDelete }: Props) {
                 ) : (
                   <Calendar className="h-3 w-3" />
                 )}
-                {new Date(task.dueDate).toLocaleDateString(undefined, {
+                {new Date(task.dueDate).toLocaleDateString(i18n.resolvedLanguage, {
                   month: "short",
                   day: "numeric",
                 })}
