@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "./TaskCard";
 import { useTranslation } from "react-i18next";
+import { fromDateInputValue, toDateInputValue } from "@shared/dates";
 
 type Props = {
   open: boolean;
@@ -59,9 +60,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
           description: task.description ?? "",
           status: task.status,
           priority: task.priority,
-          dueDate: task.dueDate
-            ? new Date(task.dueDate).toISOString().split("T")[0]
-            : "",
+          dueDate: toDateInputValue(task.dueDate),
           assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
         }
       : defaultForm
@@ -76,9 +75,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
         description: task.description ?? "",
         status: task.status,
         priority: task.priority,
-        dueDate: task.dueDate
-          ? new Date(task.dueDate).toISOString().split("T")[0]
-          : "",
+        dueDate: toDateInputValue(task.dueDate),
         assigneeId: task.assigneeId ? String(task.assigneeId) : "none",
       });
     } else if (open) {
@@ -144,7 +141,7 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
       description: form.description || undefined,
       status: form.status,
       priority: form.priority,
-      dueDate: form.dueDate ? new Date(form.dueDate).getTime() : null,
+      dueDate: fromDateInputValue(form.dueDate),
       assigneeId,
     };
 

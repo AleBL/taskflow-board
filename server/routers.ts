@@ -121,6 +121,7 @@ const tasksRouter = router({
         status: z.enum(["todo", "in_progress", "done"]).optional(),
         priority: z.enum(["low", "medium", "high"]).optional(),
         projectId: z.number().int().positive().optional(),
+        overdue: z.boolean().optional(),
       })
     )
     .query(({ ctx, input }) =>

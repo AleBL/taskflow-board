@@ -1,9 +1,10 @@
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
-import { eq, and, like, desc, asc, inArray } from "drizzle-orm";
+import { eq, and, like, desc, asc, inArray, lte, ne, isNotNull } from "drizzle-orm";
 import { users, projects, tasks, comments, projectMembers } from "../drizzle/schema";
 import type { InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { DAY_MS, isTaskOverdue } from "../shared/dates";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -283,6 +284,7 @@ export async function searchTasks(params: {
   status?: "todo" | "in_progress" | "done";
   priority?: "low" | "medium" | "high";
   projectId?: number;
+  overdue?: boolean;
 }) {
   const db = getDb();
 
@@ -294,6 +296,9 @@ export async function searchTasks(params: {
     params.status ? eq(tasks.status, params.status) : undefined,
     params.priority ? eq(tasks.priority, params.priority) : undefined,
     params.projectId ? eq(tasks.projectId, params.projectId) : undefined,
+    params.overdue ? ne(tasks.status, "done") : undefined,
+    params.overdue ? isNotNull(tasks.dueDate) : undefined,
+    params.overdue ? lte(tasks.dueDate, new Date(Date.now() - DAY_MS)) : undefined,
     inArray(tasks.projectId, accessibleIds),
   ].filter(Boolean);
 
@@ -456,7 +461,7 @@ export async function getDashboardMetrics(userId: number) {
     .where(inArray(tasks.projectId, accessibleIds))
     .all();
 
-  const now = new Date();
+  const now = Date.now();
   let todo = 0, inProgress = 0, done = 0, overdue = 0;
 
   for (const task of allTasks) {
@@ -464,9 +469,7 @@ export async function getDashboardMetrics(userId: number) {
     else if (task.status === "in_progress") inProgress++;
     else if (task.status === "done") done++;
 
-    if (task.dueDate && task.dueDate < now && task.status !== "done") {
-      overdue++;
-    }
+    if (isTaskOverdue(task, now)) overdue++;
   }
 
   return { totalProjects, total: allTasks.length, todo, inProgress, done, overdue };
