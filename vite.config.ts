@@ -2,9 +2,26 @@ import { jsxLocPlugin } from "@builder.io/vite-plugin-jsx-loc";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin()];
+/**
+ * Absolute site URL for Open Graph tags (LinkedIn and others ignore relative
+ * og:image URLs). Override with VITE_SITE_URL; on Vercel the production
+ * domain is exposed as VERCEL_PROJECT_PRODUCTION_URL.
+ */
+const siteUrl = (
+  process.env.VITE_SITE_URL ??
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://taskflow-board-nine.vercel.app")
+).replace(/\/$/, "");
+
+const siteUrlPlugin: Plugin = {
+  name: "taskflow-site-url",
+  transformIndexHtml: (html) => html.replaceAll("%SITE_URL%", siteUrl),
+};
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), siteUrlPlugin];
 
 export default defineConfig({
   plugins,
