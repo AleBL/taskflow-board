@@ -1,4 +1,4 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '../../shared/const';
+import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "../../shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
@@ -11,12 +11,15 @@ export const router = t.router;
 
 const tracingMiddleware = t.middleware(async opts => {
   const startedAt = Date.now();
-  const requestId = opts.ctx.res?.locals?.requestId ?? "n/a";
+  // Structural read: on Vercel (pnpm + preserveSymlinks) the express Response
+  // type loses its members, so `res.locals` fails to type-check there.
+  const locals = (
+    opts.ctx.res as { locals?: { requestId?: string } } | undefined
+  )?.locals;
+  const requestId = locals?.requestId ?? "n/a";
   const path = opts.path ?? "unknown";
 
-  console.log(
-    `[TRPC] -> id=${requestId} type=${opts.type} path=${path}`
-  );
+  console.log(`[TRPC] -> id=${requestId} type=${opts.type} path=${path}`);
 
   try {
     const result = await opts.next();
@@ -55,21 +58,19 @@ export const protectedProcedure = t.procedure
   .use(tracingMiddleware)
   .use(requireUser);
 
-export const adminProcedure = t.procedure
-  .use(tracingMiddleware)
-  .use(
-    t.middleware(async opts => {
-      const { ctx, next } = opts;
+export const adminProcedure = t.procedure.use(tracingMiddleware).use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
 
-      if (!ctx.user || ctx.user.role !== 'admin') {
-        throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-      }
+    if (!ctx.user || ctx.user.role !== "admin") {
+      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    }
 
-      return next({
-        ctx: {
-          ...ctx,
-          user: ctx.user,
-        },
-      });
-    }),
-  );
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  })
+);

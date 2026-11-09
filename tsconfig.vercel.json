@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "preserveSymlinks": true,
+    "incremental": false
+  },
+  "include": [],
+  "files": ["api/index.ts"]
+}
