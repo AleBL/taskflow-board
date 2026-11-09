@@ -46,7 +46,8 @@ var t = initTRPC.context().create({
 var router = t.router;
 var tracingMiddleware = t.middleware(async (opts) => {
   const startedAt = Date.now();
-  const requestId = opts.ctx.res?.locals?.requestId ?? "n/a";
+  const locals = opts.ctx.res?.locals;
+  const requestId = locals?.requestId ?? "n/a";
   const path = opts.path ?? "unknown";
   console.log(
     `[TRPC] -> id=${requestId} type=${opts.type} path=${path}`
@@ -498,7 +499,10 @@ async function assertProjectOwner(projectId, userId) {
     throw new TRPCError2({ code: "NOT_FOUND", message: "Project not found" });
   }
   if (project.ownerId !== userId) {
-    throw new TRPCError2({ code: "FORBIDDEN", message: "Only the project owner can do this" });
+    throw new TRPCError2({
+      code: "FORBIDDEN",
+      message: "Only the project owner can do this"
+    });
   }
   return project;
 }
@@ -584,7 +588,10 @@ var DEMO_PROJECTS = [
     color: "#6366f1",
     tasks: [
       {
-        title: { pt: "Corrigir crash ao abrir a c\xE2mera no Android 14", en: "Fix camera crash on Android 14" },
+        title: {
+          pt: "Corrigir crash ao abrir a c\xE2mera no Android 14",
+          en: "Fix camera crash on Android 14"
+        },
         description: {
           pt: "Acontece ao anexar foto no perfil. Afeta cerca de 8% das sess\xF5es no beta.",
           en: "Happens when attaching a profile photo. Affects about 8% of beta sessions."
@@ -613,7 +620,10 @@ var DEMO_PROJECTS = [
         ]
       },
       {
-        title: { pt: "Login com Google e Apple", en: "Sign in with Google and Apple" },
+        title: {
+          pt: "Login com Google e Apple",
+          en: "Sign in with Google and Apple"
+        },
         description: {
           pt: "OAuth nativo em cada plataforma e valida\xE7\xE3o do token no backend.",
           en: "Native OAuth on each platform and token validation on the backend."
@@ -634,35 +644,50 @@ var DEMO_PROJECTS = [
         ]
       },
       {
-        title: { pt: "Notifica\xE7\xF5es push de lembrete", en: "Reminder push notifications" },
+        title: {
+          pt: "Notifica\xE7\xF5es push de lembrete",
+          en: "Reminder push notifications"
+        },
         status: "todo",
         priority: "medium",
         dueInDays: 5,
         assignee: 3
       },
       {
-        title: { pt: "Textos e screenshots da App Store", en: "App Store copy and screenshots" },
+        title: {
+          pt: "Textos e screenshots da App Store",
+          en: "App Store copy and screenshots"
+        },
         status: "todo",
         priority: "low",
         dueInDays: 9,
         assignee: 1
       },
       {
-        title: { pt: "Teste de usabilidade com 5 usu\xE1rios", en: "Usability test with 5 users" },
+        title: {
+          pt: "Teste de usabilidade com 5 usu\xE1rios",
+          en: "Usability test with 5 users"
+        },
         status: "todo",
         priority: "medium",
         dueInDays: null,
         assignee: 0
       },
       {
-        title: { pt: "Pipeline de CI/CD com deploy na loja", en: "CI/CD pipeline with store deploys" },
+        title: {
+          pt: "Pipeline de CI/CD com deploy na loja",
+          en: "CI/CD pipeline with store deploys"
+        },
         status: "done",
         priority: "high",
         dueInDays: -6,
         assignee: 2
       },
       {
-        title: { pt: "\xCDcone e splash screen", en: "App icon and splash screen" },
+        title: {
+          pt: "\xCDcone e splash screen",
+          en: "App icon and splash screen"
+        },
         status: "done",
         priority: "medium",
         dueInDays: -10,
@@ -679,7 +704,10 @@ var DEMO_PROJECTS = [
     color: "#ec4899",
     tasks: [
       {
-        title: { pt: "Revisar SEO das p\xE1ginas principais", en: "SEO review of key pages" },
+        title: {
+          pt: "Revisar SEO das p\xE1ginas principais",
+          en: "SEO review of key pages"
+        },
         description: {
           pt: "T\xEDtulos, meta descriptions e dados estruturados.",
           en: "Titles, meta descriptions and structured data."
@@ -707,21 +735,30 @@ var DEMO_PROJECTS = [
         ]
       },
       {
-        title: { pt: "Otimizar imagens e Core Web Vitals", en: "Optimize images and Core Web Vitals" },
+        title: {
+          pt: "Otimizar imagens e Core Web Vitals",
+          en: "Optimize images and Core Web Vitals"
+        },
         status: "todo",
         priority: "medium",
         dueInDays: 6,
         assignee: 2
       },
       {
-        title: { pt: "Migrar o blog para o novo layout", en: "Move the blog to the new layout" },
+        title: {
+          pt: "Migrar o blog para o novo layout",
+          en: "Move the blog to the new layout"
+        },
         status: "todo",
         priority: "low",
         dueInDays: 14,
         assignee: 3
       },
       {
-        title: { pt: "Design system: cores, tipografia e componentes", en: "Design system: colors, type and components" },
+        title: {
+          pt: "Design system: cores, tipografia e componentes",
+          en: "Design system: colors, type and components"
+        },
         status: "done",
         priority: "high",
         dueInDays: -4,
@@ -745,7 +782,10 @@ var DEMO_PROJECTS = [
     color: "#22c55e",
     tasks: [
       {
-        title: { pt: "E-mail de boas-vindas com checklist", en: "Welcome email with checklist" },
+        title: {
+          pt: "E-mail de boas-vindas com checklist",
+          en: "Welcome email with checklist"
+        },
         status: "in_progress",
         priority: "medium",
         dueInDays: 0,
@@ -762,7 +802,10 @@ var DEMO_PROJECTS = [
         ]
       },
       {
-        title: { pt: "Central de ajuda com 10 artigos", en: "Help center with 10 articles" },
+        title: {
+          pt: "Central de ajuda com 10 artigos",
+          en: "Help center with 10 articles"
+        },
         status: "todo",
         priority: "high",
         dueInDays: 4,
@@ -776,14 +819,20 @@ var DEMO_PROJECTS = [
         assignee: 1
       },
       {
-        title: { pt: "Pesquisa NPS ap\xF3s 30 dias", en: "NPS survey after 30 days" },
+        title: {
+          pt: "Pesquisa NPS ap\xF3s 30 dias",
+          en: "NPS survey after 30 days"
+        },
         status: "todo",
         priority: "low",
         dueInDays: null,
         assignee: null
       },
       {
-        title: { pt: "Mapear a jornada do novo cliente", en: "Map the new customer journey" },
+        title: {
+          pt: "Mapear a jornada do novo cliente",
+          en: "Map the new customer journey"
+        },
         status: "done",
         priority: "medium",
         dueInDays: -12,
@@ -839,7 +888,11 @@ async function createDemoWorkspace(options) {
     )
   );
   const taskRows = DEMO_PROJECTS.flatMap((project, projectIndex) => {
-    const positions = { todo: 0, in_progress: 0, done: 0 };
+    const positions = {
+      todo: 0,
+      in_progress: 0,
+      done: 0
+    };
     return project.tasks.map((task) => {
       const dueDate = task.dueInDays === null ? null : new Date(today + task.dueInDays * DAY_MS);
       return {
@@ -889,7 +942,12 @@ async function cleanupExpiredDemos(maxAgeMs = DEMO_SESSION_MAX_AGE_MS) {
   const demoProjects = db.select({ id: projects.id }).from(projects).where(inArray2(projects.ownerId, expiredUsers));
   const demoTasks = db.select({ id: tasks.id }).from(tasks).where(inArray2(tasks.projectId, demoProjects));
   await db.batch([
-    db.delete(comments).where(or(inArray2(comments.taskId, demoTasks), inArray2(comments.authorId, expiredUsers))),
+    db.delete(comments).where(
+      or(
+        inArray2(comments.taskId, demoTasks),
+        inArray2(comments.authorId, expiredUsers)
+      )
+    ),
     db.delete(tasks).where(inArray2(tasks.projectId, demoProjects)),
     db.update(tasks).set({ assigneeId: null }).where(inArray2(tasks.assigneeId, expiredUsers)),
     db.delete(projectMembers).where(

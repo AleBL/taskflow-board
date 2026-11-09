@@ -1,16 +1,21 @@
 # TaskFlow Board
 
-A clean, focused Kanban task management application built with React, tRPC, and SQLite.
+A clean, focused Kanban task management app built with React, tRPC and Turso (libSQL).
+
+**[Try the live demo](taskflow-board.a-barros.uk/demo)**: no sign-up, you land on a ready-made board in a few seconds ([versão em português](taskflow-board.a-barros.uk/demo?lng=pt-BR)).
+
+![TaskFlow Kanban board](docs/screenshot-board.png)
 
 ## Features
 
-- **Projects** — Create, edit, and delete projects with custom colors
-- **Kanban Board** — Drag-and-drop tasks between To Do, In Progress, and Done columns
-- **Tasks** — Full CRUD with title, description, priority, due date, and status
-- **Comments** — Add and delete comments on tasks
-- **Search & Filters** — Search tasks by title, filter by status, priority, and project
-- **Dashboard** — Overview metrics: total tasks, by status, overdue count
-- **Dark Theme** — Clean dark UI with sidebar navigation
+- **Kanban board**: drag and drop tasks between To Do, In Progress and Done, with instant (optimistic) updates
+- **Tasks**: title, description, priority, due date (timezone-safe), assignee and comments
+- **Projects and members**: custom colors, invite teammates by email, owner-only management
+- **Search and filters**: by title, status, priority, project and overdue
+- **Dashboard**: totals by status and overdue alerts
+- **Demo mode**: each visitor gets an isolated, pre-filled workspace that expires after 24 hours
+- **Security**: per-project authorization on every API call, rate-limited auth, httpOnly `SameSite=Lax` session cookies
+- **i18n**: English and Brazilian Portuguese (`?lng=en` / `?lng=pt-BR` in any URL)
 
 ## Tech Stack
 
@@ -86,7 +91,8 @@ The app will be available at `http://localhost:3000`.
 ### Testing
 
 ```bash
-pnpm test
+pnpm test           # Vitest: authorization, demo mode, auth and date rules
+pnpm check          # TypeScript, including the same check Vercel runs on api/
 ```
 
 ### Build

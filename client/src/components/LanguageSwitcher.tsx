@@ -8,22 +8,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Globe } from "lucide-react";
 
+// No flag emojis: Windows renders them as plain letters.
 const LANGUAGES = [
-  { code: "en", label: "English", flag: "🇺🇸" },
-  { code: "pt-BR", label: "Português (BR)", flag: "🇧🇷" },
+  { code: "en", label: "English", short: "EN" },
+  { code: "pt-BR", label: "Português (BR)", short: "PT" },
 ];
 
 export function LanguageSwitcher() {
   const { i18n } = useTranslation();
-  const current = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
+  const current = LANGUAGES.find((l) => l.code === i18n.resolvedLanguage) ?? LANGUAGES[0];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
           <Globe className="h-4 w-4" />
-          <span className="hidden sm:inline">{current?.flag} {current?.label}</span>
-          <span className="sm:hidden">{current?.flag}</span>
+          <span className="hidden sm:inline">{current?.label}</span>
+          <span className="sm:hidden">{current?.short}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -31,9 +32,9 @@ export function LanguageSwitcher() {
           <DropdownMenuItem
             key={lang.code}
             onClick={() => i18n.changeLanguage(lang.code)}
-            className={i18n.language === lang.code ? "font-semibold bg-accent" : ""}
+            className={i18n.resolvedLanguage === lang.code ? "font-semibold bg-accent" : ""}
           >
-            {lang.flag} {lang.label}
+            {lang.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

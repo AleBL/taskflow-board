@@ -52,7 +52,7 @@ const defaultForm: TaskForm = {
 };
 
 export function TaskModal({ open, onClose, projectId, task, defaultStatus = "todo" }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const utils = trpc.useUtils();
   const { user } = useAuth();
 
@@ -291,7 +291,7 @@ export function TaskModal({ open, onClose, projectId, task, defaultStatus = "tod
                     </p>
                     <p className="text-sm text-foreground">{c.content}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(c.createdAt).toLocaleString()}
+                      {new Date(c.createdAt).toLocaleString(i18n.resolvedLanguage)}
                     </p>
                   </div>
                   {c.authorId === user?.id && (

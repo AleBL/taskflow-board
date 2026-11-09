@@ -45,7 +45,7 @@ const PRIORITY_CONFIG = {
 const STATUS_FILTERS = ["all", "todo", "in_progress", "done", "overdue"] as const;
 
 export default function TaskSearch() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const utils = trpc.useUtils();
 
   const [search, setSearch] = useState("");
@@ -240,7 +240,7 @@ export default function TaskSearch() {
                         {task.dueDate && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {new Date(task.dueDate).toLocaleDateString()}
+                            {new Date(task.dueDate).toLocaleDateString(i18n.resolvedLanguage)}
                           </span>
                         )}
                       </div>

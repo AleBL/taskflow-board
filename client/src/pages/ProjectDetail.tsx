@@ -322,13 +322,13 @@ export default function ProjectDetail() {
               aria-label={t("members.manage")}
             >
               <Users className="h-4 w-4 text-muted-foreground" />
-              <div className="flex -space-x-2">
+              <div className="flex -space-x-1.5">
                 {members.slice(0, 5).map((m) => (
                   <Tooltip key={m.id}>
                     <TooltipTrigger asChild>
                       <Avatar className="h-7 w-7 border-2 border-background">
                         <AvatarFallback
-                          className="text-xs text-white"
+                          className="text-[10px] font-semibold text-white"
                           style={{ backgroundColor: memberColor(m.id) }}
                         >
                           {memberInitials(m)}
