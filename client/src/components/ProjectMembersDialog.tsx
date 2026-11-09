@@ -24,7 +24,10 @@ export type ProjectMember = {
 };
 
 export function memberInitials(member: Pick<ProjectMember, "name" | "email">) {
-  return (member.name ?? member.email ?? "?").slice(0, 2).toUpperCase();
+  const parts = (member.name ?? member.email ?? "?").trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "?";
+  const last = parts.length > 1 ? parts[parts.length - 1]![0] : "";
+  return `${first}${last}`.toUpperCase();
 }
 
 export function memberColor(id: number) {
