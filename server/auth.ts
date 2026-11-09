@@ -12,17 +12,30 @@ type RequestLike = {
 };
 
 const BCRYPT_ROUNDS = 12;
+const DEV_ONLY_SECRET = "dev-only-secret-not-for-production";
+
+let warnedAboutDevSecret = false;
 
 function getSecretKey() {
-  const secret = ENV.cookieSecret || "fallback-dev-secret-change-in-prod";
+  const secret = ENV.cookieSecret;
+  if (!secret) {
+    if (ENV.isProduction) {
+      throw new Error("JWT_SECRET must be set in production");
+    }
+    if (!warnedAboutDevSecret) {
+      warnedAboutDevSecret = true;
+      console.warn("[Auth] JWT_SECRET not set, using an insecure development secret");
+    }
+    return new TextEncoder().encode(DEV_ONLY_SECRET);
+  }
   return new TextEncoder().encode(secret);
 }
 
-export async function signSession(userId: number): Promise<string> {
+export async function signSession(userId: number, maxAgeMs: number): Promise<string> {
   return new SignJWT({ sub: String(userId) })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("365d")
+    .setExpirationTime(Math.floor((Date.now() + maxAgeMs) / 1000))
     .sign(getSecretKey());
 }
 
@@ -66,4 +79,18 @@ export async function authenticateRequest(req: RequestLike): Promise<User | null
   if (!userId) return null;
 
   return getUserById(userId);
+}
+
+export type PublicUser = Pick<User, "id" | "name" | "email" | "role" | "loginMethod" | "createdAt">;
+
+/** Strips secrets (passwordHash) before a user object leaves the server. */
+export function toPublicUser(user: User): PublicUser {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    loginMethod: user.loginMethod,
+    createdAt: user.createdAt,
+  };
 }

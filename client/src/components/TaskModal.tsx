@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { Task } from "./TaskCard";
 import { useTranslation } from "react-i18next";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { fromDateInputValue, toDateInputValue } from "@shared/dates";
 
 type Props = {
@@ -52,6 +53,7 @@ const defaultForm: TaskForm = {
 export function TaskModal({ open, onClose, projectId, task }: Props) {
   const { t } = useTranslation();
   const utils = trpc.useUtils();
+  const { user } = useAuth();
 
   const [form, setForm] = useState<TaskForm>(() =>
     task
@@ -83,9 +85,9 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
     }
   }, [task, open]);
 
-  const { data: members } = trpc.users.list.useQuery(
-    undefined,
-    { enabled: open }
+  const { data: members } = trpc.tasks.members.useQuery(
+    { projectId },
+    { enabled: open && projectId > 0 }
   );
 
   const { data: comments } = trpc.comments.listByTask.useQuery(
@@ -289,14 +291,17 @@ export function TaskModal({ open, onClose, projectId, task }: Props) {
                       {new Date(c.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive shrink-0"
-                    onClick={() => deleteCommentMutation.mutate({ id: c.id })}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {c.authorId === user?.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("comments.deleteComment")}
+                      className="h-7 w-7 opacity-60 sm:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => deleteCommentMutation.mutate({ id: c.id })}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               ))}
               {comments?.length === 0 && (

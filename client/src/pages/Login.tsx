@@ -25,7 +25,13 @@ export default function Login() {
       navigate("/dashboard");
     },
     onError: (e) => {
-      toast.error(e.message);
+      toast.error(
+        e.data?.code === "TOO_MANY_REQUESTS"
+          ? t("errors.tooManyRequests")
+          : e.data?.code === "UNAUTHORIZED"
+            ? t("auth.invalidCredentials")
+            : t("common.error")
+      );
     },
   });
 

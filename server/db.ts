@@ -130,15 +130,6 @@ export async function createLocalUser(data: {
   return result[0]!;
 }
 
-export async function getAllUsers() {
-  const db = getDb();
-  return db
-    .select({ id: users.id, name: users.name, email: users.email })
-    .from(users)
-    .orderBy(asc(users.name))
-    .all();
-}
-
 export async function getProjectMembersList(projectId: number) {
   const db = getDb();
   return db
@@ -168,20 +159,24 @@ export async function isProjectMember(projectId: number, userId: number): Promis
 
 export async function addProjectMember(projectId: number, userId: number, role: "owner" | "member" = "member") {
   const db = getDb();
-  const existing = await db
-    .select({ id: projectMembers.id })
-    .from(projectMembers)
-    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
-    .get();
+  await db
+    .insert(projectMembers)
+    .values({ projectId, userId, role, joinedAt: new Date() })
+    // No explicit target: still valid if migration 0003 (unique index) has not run yet.
+    .onConflictDoNothing();
+}
 
-  if (!existing) {
-    await db.insert(projectMembers).values({
-      projectId,
-      userId,
-      role,
-      joinedAt: new Date(),
-    });
-  }
+export async function removeProjectMember(projectId: number, userId: number) {
+  const db = getDb();
+  await db
+    .update(tasks)
+    .set({ assigneeId: null, updatedAt: new Date() })
+    .where(and(eq(tasks.projectId, projectId), eq(tasks.assigneeId, userId)));
+  const result = await db
+    .delete(projectMembers)
+    .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+    .returning();
+  return result[0] ?? null;
 }
 
 export async function getAccessibleProjectIds(userId: number): Promise<number[]> {
@@ -338,13 +333,7 @@ export async function createTask(data: {
     .values({ ...data, position, createdAt: now, updatedAt: now })
     .returning();
 
-  const task = result[0]!;
-
-  if (data.assigneeId) {
-    await addProjectMember(data.projectId, data.assigneeId, "member");
-  }
-
-  return task;
+  return result[0]!;
 }
 
 export async function updateTask(
@@ -380,13 +369,7 @@ export async function updateTask(
     .where(eq(tasks.id, id))
     .returning();
 
-  const task = result[0] ?? null;
-
-  if (task && data.assigneeId) {
-    await addProjectMember(task.projectId, data.assigneeId, "member");
-  }
-
-  return task;
+  return result[0] ?? null;
 }
 
 export async function deleteTask(id: number) {

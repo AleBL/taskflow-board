@@ -1,3 +1,4 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,7 @@ export default function Projects() {
   const { t } = useTranslation();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
+  const { user } = useAuth();
 
   const { data: projects, isLoading } = trpc.projects.list.useQuery();
 
@@ -175,6 +177,7 @@ export default function Projects() {
                         {project.name}
                       </CardTitle>
                     </div>
+                    {project.ownerId === user?.id && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -208,6 +211,7 @@ export default function Projects() {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -215,7 +219,7 @@ export default function Projects() {
                     {project.description || t("common.none")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-3">
-                    Created {new Date(project.createdAt).toLocaleDateString()}
+                    {t("projects.createdOn", { date: new Date(project.createdAt).toLocaleDateString() })}
                   </p>
                 </CardContent>
               </Card>

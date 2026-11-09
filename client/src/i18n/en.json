@@ -108,7 +108,8 @@
     "namePlaceholder": "e.g. Website Redesign",
     "descriptionPlaceholder": "What is this project about?",
     "viewBoard": "View Board",
-    "lastUpdated": "Last updated"
+    "lastUpdated": "Last updated",
+    "createdOn": "Created {{date}}"
   },
   "board": {
     "title": "Board",
@@ -203,5 +204,8 @@
     "post": "Post",
     "noComments": "No comments yet",
     "deleteComment": "Delete comment"
+  },
+  "errors": {
+    "tooManyRequests": "Too many attempts. Please wait a few minutes and try again."
   }
 }

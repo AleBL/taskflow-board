@@ -6,7 +6,7 @@ type RequestLike = {
 type SessionCookieOptions = {
   httpOnly: boolean;
   path: string;
-  sameSite: "none" | "lax";
+  sameSite: "lax";
   secure: boolean;
 };
 
@@ -20,12 +20,15 @@ function isSecureRequest(req: RequestLike): boolean {
   return protoList.some((proto: string) => proto.trim().toLowerCase() === "https");
 }
 
+/**
+ * Frontend and API share the same origin, so `lax` is enough and blocks the
+ * cookie on cross-site POSTs (CSRF).
+ */
 export function getSessionCookieOptions(req: RequestLike): SessionCookieOptions {
-  const secure = isSecureRequest(req);
   return {
     httpOnly: true,
     path: "/",
-    sameSite: secure ? "none" : "lax",
-    secure,
+    sameSite: "lax",
+    secure: isSecureRequest(req),
   };
 }

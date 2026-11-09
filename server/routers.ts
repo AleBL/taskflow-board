@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COOKIE_NAME } from "../shared/const";
+import { COOKIE_NAME, SESSION_MAX_AGE_MS } from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -11,7 +11,6 @@ import {
   updateProject,
   deleteProject,
   getTasksByProject,
-  getTaskById,
   createTask,
   updateTask,
   deleteTask,
@@ -25,9 +24,17 @@ import {
   createLocalUser,
   updateUser,
   getProjectMembersList,
-  getAllUsers,
+  addProjectMember,
+  removeProjectMember,
 } from "./db";
-import { hashPassword, verifyPassword, signSession } from "./auth";
+import { hashPassword, verifyPassword, signSession, toPublicUser } from "./auth";
+import {
+  assertAssigneeIsMember,
+  assertProjectMember,
+  assertProjectOwner,
+  getAccessibleTask,
+} from "./access";
+import { enforceRateLimit } from "./rateLimit";
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
@@ -47,6 +54,19 @@ type ResponseWithCookies = {
   cookie?: (name: string, value: string, options?: Record<string, unknown>) => void;
   clearCookie?: (name: string, options?: Record<string, unknown>) => void;
 };
+
+async function setSessionCookie(
+  ctx: { req: Parameters<typeof getSessionCookieOptions>[0]; res: unknown },
+  userId: number,
+  maxAgeMs: number
+) {
+  const token = await signSession(userId, maxAgeMs);
+  const res = ctx.res as ResponseWithCookies | undefined;
+  res?.cookie?.(COOKIE_NAME, token, {
+    ...getSessionCookieOptions(ctx.req),
+    maxAge: maxAgeMs,
+  });
+}
 
 // ─── Projects Router ──────────────────────────────────────────────────────────
 
@@ -103,16 +123,53 @@ const projectsRouter = router({
       if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
       return { success: true };
     }),
-});
 
-const usersRouter = router({
-  list: protectedProcedure.query(() => getAllUsers()),
+  addMember: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.number().int().positive(),
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertProjectOwner(input.projectId, ctx.user.id);
+      const invitee = await getUserByEmail(input.email.trim());
+      if (!invitee) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+      }
+      const members = await getProjectMembersList(input.projectId);
+      if (members.some((m) => m.id === invitee.id)) {
+        throw new TRPCError({ code: "CONFLICT", message: "User is already a member" });
+      }
+      await addProjectMember(input.projectId, invitee.id, "member");
+      return { success: true };
+    }),
+
+  removeMember: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.number().int().positive(),
+        userId: z.number().int().positive(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const project = await assertProjectOwner(input.projectId, ctx.user.id);
+      if (input.userId === project.ownerId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "The owner cannot be removed" });
+      }
+      const removed = await removeProjectMember(input.projectId, input.userId);
+      if (!removed) throw new TRPCError({ code: "NOT_FOUND", message: "Member not found" });
+      return { success: true };
+    }),
 });
 
 const tasksRouter = router({
   listByProject: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(({ input }) => getTasksByProject(input.projectId)),
+    .query(async ({ ctx, input }) => {
+      await assertProjectMember(input.projectId, ctx.user.id);
+      return getTasksByProject(input.projectId);
+    }),
 
   search: protectedProcedure
     .input(
@@ -130,15 +187,14 @@ const tasksRouter = router({
 
   getById: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .query(async ({ input }) => {
-      const task = await getTaskById(input.id);
-      if (!task) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
-      return task;
-    }),
+    .query(({ ctx, input }) => getAccessibleTask(input.id, ctx.user.id)),
 
   members: protectedProcedure
     .input(z.object({ projectId: z.number().int().positive() }))
-    .query(({ input }) => getProjectMembersList(input.projectId)),
+    .query(async ({ ctx, input }) => {
+      await assertProjectMember(input.projectId, ctx.user.id);
+      return getProjectMembersList(input.projectId);
+    }),
 
   create: protectedProcedure
     .input(
@@ -152,8 +208,10 @@ const tasksRouter = router({
         assigneeId: z.number().int().positive().optional().nullable(),
       })
     )
-    .mutation(({ input }) =>
-      createTask({
+    .mutation(async ({ ctx, input }) => {
+      await assertProjectMember(input.projectId, ctx.user.id);
+      await assertAssigneeIsMember(input.projectId, input.assigneeId);
+      return createTask({
         title: input.title,
         description: input.description ?? null,
         status: input.status ?? "todo",
@@ -161,8 +219,8 @@ const tasksRouter = router({
         dueDate: input.dueDate ? new Date(input.dueDate) : null,
         projectId: input.projectId,
         assigneeId: input.assigneeId ?? null,
-      })
-    ),
+      });
+    }),
 
   update: protectedProcedure
     .input(
@@ -177,8 +235,10 @@ const tasksRouter = router({
         assigneeId: z.number().int().positive().optional().nullable(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, dueDate, ...rest } = input;
+      const existing = await getAccessibleTask(id, ctx.user.id);
+      await assertAssigneeIsMember(existing.projectId, rest.assigneeId);
       const task = await updateTask(id, {
         ...rest,
         dueDate: dueDate !== undefined ? (dueDate ? new Date(dueDate) : null) : undefined,
@@ -195,7 +255,8 @@ const tasksRouter = router({
         position: z.number().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await getAccessibleTask(input.id, ctx.user.id);
       const task = await updateTask(input.id, {
         status: input.status,
         position: input.position,
@@ -206,7 +267,8 @@ const tasksRouter = router({
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await getAccessibleTask(input.id, ctx.user.id);
       const deleted = await deleteTask(input.id);
       if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Task not found" });
       return { success: true };
@@ -216,7 +278,10 @@ const tasksRouter = router({
 const commentsRouter = router({
   listByTask: protectedProcedure
     .input(z.object({ taskId: z.number().int().positive() }))
-    .query(({ input }) => getCommentsByTask(input.taskId)),
+    .query(async ({ ctx, input }) => {
+      await getAccessibleTask(input.taskId, ctx.user.id);
+      return getCommentsByTask(input.taskId);
+    }),
 
   create: protectedProcedure
     .input(
@@ -225,13 +290,14 @@ const commentsRouter = router({
         content: z.string().min(1).max(2000),
       })
     )
-    .mutation(({ ctx, input }) =>
-      createComment({
+    .mutation(async ({ ctx, input }) => {
+      await getAccessibleTask(input.taskId, ctx.user.id);
+      return createComment({
         taskId: input.taskId,
         content: input.content,
         authorId: ctx.user.id,
-      })
-    ),
+      });
+    }),
 
   delete: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
@@ -252,7 +318,7 @@ export const appRouter = router({
   system: systemRouter,
 
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query(({ ctx }) => (ctx.user ? toPublicUser(ctx.user) : null)),
 
     register: publicProcedure
       .input(
@@ -263,6 +329,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        await enforceRateLimit("register", ctx.req);
         const existing = await withTimeout(
           getUserByEmail(input.email),
           4000,
@@ -284,17 +351,8 @@ export const appRouter = router({
           4000,
           "REGISTER_CREATE_USER"
         );
-        const token = await signSession(user.id);
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        const res = ctx.res as unknown as ResponseWithCookies | undefined;
-        res?.cookie?.(COOKIE_NAME, token, {
-          ...cookieOptions,
-          maxAge: 365 * 24 * 60 * 60 * 1000,
-        });
-        return {
-          success: true,
-          user: { id: user.id, name: user.name, email: user.email, role: user.role },
-        };
+        await setSessionCookie(ctx, user.id, SESSION_MAX_AGE_MS);
+        return { success: true, user: toPublicUser(user) };
       }),
 
     login: publicProcedure
@@ -305,6 +363,7 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input, ctx }) => {
+        await enforceRateLimit("login", ctx.req);
         const user = await withTimeout(
           getUserByEmail(input.email),
           4000,
@@ -323,17 +382,8 @@ export const appRouter = router({
             message: "Invalid email or password",
           });
         }
-        const token = await signSession(user.id);
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        const res = ctx.res as unknown as ResponseWithCookies | undefined;
-        res?.cookie?.(COOKIE_NAME, token, {
-          ...cookieOptions,
-          maxAge: 365 * 24 * 60 * 60 * 1000,
-        });
-        return {
-          success: true,
-          user: { id: user.id, name: user.name, email: user.email, role: user.role },
-        };
+        await setSessionCookie(ctx, user.id, SESSION_MAX_AGE_MS);
+        return { success: true, user: toPublicUser(user) };
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -378,7 +428,7 @@ export const appRouter = router({
         }
 
         if (Object.keys(updateData).length === 0) {
-          return { success: true, user };
+          return { success: true, user: toPublicUser(user) };
         }
 
         const updated = await withTimeout(
@@ -386,11 +436,10 @@ export const appRouter = router({
           4000,
           "PROFILE_UPDATE_USER"
         );
-        return { success: true, user: updated };
+        return { success: true, user: updated ? toPublicUser(updated) : null };
       }),
   }),
 
-  users: usersRouter,
   projects: projectsRouter,
   tasks: tasksRouter,
   comments: commentsRouter,

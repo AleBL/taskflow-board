@@ -4,5 +4,6 @@ export const ENV = {
   databaseUrl: process.env.TURSO_DATABASE_URL ?? process.env.DATABASE_URL ?? "",
   tursoAuthToken: process.env.TURSO_AUTH_TOKEN ?? "",
   ownerOpenId: "",
-  isProduction: process.env.NODE_ENV === "production",
+  isProduction:
+    process.env.NODE_ENV === "production" || process.env.VERCEL === "1",
 };

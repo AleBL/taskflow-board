@@ -1,60 +1,17 @@
-process.env.TURSO_DATABASE_URL = ":memory:";
-delete process.env.TURSO_AUTH_TOKEN;
-
-import { describe, it, expect, beforeAll } from "vitest";
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
-import { setDb } from "./db";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { COOKIE_NAME } from "../shared/const";
-import type { TrpcContext } from "./_core/context";
+import { appRouter } from "./routers";
+import { createTestContext, setupTestDb } from "./testDb";
 
-const _memClient = createClient({ url: ":memory:" });
+let cleanup: () => void;
 
 beforeAll(async () => {
-  await _memClient.execute(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      openId TEXT NOT NULL UNIQUE,
-      name TEXT,
-      email TEXT UNIQUE,
-      passwordHash TEXT,
-      loginMethod TEXT,
-      role TEXT NOT NULL DEFAULT 'user',
-      createdAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      updatedAt INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
-      lastSignedIn INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
-    )
-  `);
-  setDb(drizzle(_memClient));
+  ({ cleanup } = await setupTestDb());
 });
 
-const { appRouter } = await import("./routers");
+afterAll(() => cleanup());
 
-type CookieCall = { name: string; value: string; options: Record<string, unknown> };
-type ClearCall = { name: string; options: Record<string, unknown> };
-
-function createPublicCtx() {
-  const setCookies: CookieCall[] = [];
-  const clearCookies: ClearCall[] = [];
-
-  const ctx: TrpcContext = {
-    user: null,
-    req: {
-      protocol: "https",
-      headers: {},
-    } as TrpcContext["req"],
-    res: {
-      cookie: (name: string, value: string, options: Record<string, unknown>) => {
-        setCookies.push({ name, value, options });
-      },
-      clearCookie: (name: string, options: Record<string, unknown>) => {
-        clearCookies.push({ name, options });
-      },
-    } as unknown as TrpcContext["res"],
-  };
-
-  return { ctx, setCookies, clearCookies };
-}
+const createPublicCtx = () => createTestContext();
 
 describe("auth.register", () => {
   it("registers a new user and sets a session cookie", async () => {
@@ -71,6 +28,7 @@ describe("auth.register", () => {
     expect(result.success).toBe(true);
     expect(result.user.email).toBe(email);
     expect(result.user.name).toBe("Test User");
+    expect(result.user).not.toHaveProperty("passwordHash");
     expect(setCookies).toHaveLength(1);
     expect(setCookies[0]?.name).toBe(COOKIE_NAME);
     expect(typeof setCookies[0]?.value).toBe("string");

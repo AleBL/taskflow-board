@@ -108,7 +108,8 @@
     "namePlaceholder": "ex: Redesign do Site",
     "descriptionPlaceholder": "Sobre o que é este projeto?",
     "viewBoard": "Ver Quadro",
-    "lastUpdated": "Última atualização"
+    "lastUpdated": "Última atualização",
+    "createdOn": "Criado em {{date}}"
   },
   "board": {
     "title": "Quadro",
@@ -203,5 +204,8 @@
     "post": "Publicar",
     "noComments": "Nenhum comentário ainda",
     "deleteComment": "Excluir comentário"
+  },
+  "errors": {
+    "tooManyRequests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
   }
 }

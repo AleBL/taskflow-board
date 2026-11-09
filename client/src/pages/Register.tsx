@@ -27,7 +27,13 @@ export default function Register() {
       navigate("/dashboard");
     },
     onError: (e) => {
-      toast.error(e.message);
+      toast.error(
+        e.data?.code === "TOO_MANY_REQUESTS"
+          ? t("errors.tooManyRequests")
+          : e.data?.code === "CONFLICT"
+            ? t("auth.emailInUse")
+            : t("common.error")
+      );
     },
   });
 
