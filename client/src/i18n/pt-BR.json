@@ -228,6 +228,22 @@
     "or": "ou",
     "explore": "Explorar a demonstração sem cadastro"
   },
+  "members": {
+    "title": "Membros",
+    "manage": "Gerenciar membros",
+    "inviteLabel": "Convidar por e-mail",
+    "invitePlaceholder": "colega@exemplo.com",
+    "invite": "Convidar",
+    "invited": "Membro adicionado",
+    "removed": "Membro removido",
+    "remove": "Remover",
+    "owner": "Dono",
+    "member": "Membro",
+    "userNotFound": "Nenhuma conta encontrada com este e-mail",
+    "alreadyMember": "Este usuário já é membro",
+    "demoDisabled": "Convidar pessoas reais está desativado no modo demonstração",
+    "ownerOnly": "Apenas o dono do projeto pode gerenciar membros"
+  },
   "errors": {
     "tooManyRequests": "Muitas tentativas. Aguarde alguns minutos e tente novamente."
   }

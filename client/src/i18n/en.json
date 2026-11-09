@@ -228,6 +228,22 @@
     "or": "or",
     "explore": "Explore the demo without signing up"
   },
+  "members": {
+    "title": "Members",
+    "manage": "Manage members",
+    "inviteLabel": "Invite by email",
+    "invitePlaceholder": "teammate@example.com",
+    "invite": "Invite",
+    "invited": "Member added",
+    "removed": "Member removed",
+    "remove": "Remove",
+    "owner": "Owner",
+    "member": "Member",
+    "userNotFound": "No account found with this email",
+    "alreadyMember": "This user is already a member",
+    "demoDisabled": "Inviting real people is disabled in demo mode",
+    "ownerOnly": "Only the project owner can manage members"
+  },
   "errors": {
     "tooManyRequests": "Too many attempts. Please wait a few minutes and try again."
   }
