@@ -1,4 +1,5 @@
 import { getLoginUrl } from "@/const";
+import { DEMO_LOGIN_METHOD } from "@shared/const";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -47,6 +48,7 @@ export function useAuth(options?: UseAuthOptions) {
       loading: meQuery.isLoading || logoutMutation.isPending,
       error: meQuery.error ?? logoutMutation.error ?? null,
       isAuthenticated: Boolean(meQuery.data),
+      isDemo: meQuery.data?.loginMethod === DEMO_LOGIN_METHOD,
     }),
     [
       meQuery.data,

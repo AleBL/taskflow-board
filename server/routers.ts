@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { COOKIE_NAME, SESSION_MAX_AGE_MS } from "../shared/const";
+import {
+  COOKIE_NAME,
+  DEMO_LOGIN_METHOD,
+  DEMO_SESSION_MAX_AGE_MS,
+  SESSION_MAX_AGE_MS,
+} from "../shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -35,6 +40,7 @@ import {
   getAccessibleTask,
 } from "./access";
 import { enforceRateLimit } from "./rateLimit";
+import { cleanupExpiredDemos, createDemoWorkspace } from "./demo";
 
 async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: NodeJS.Timeout | undefined;
@@ -66,6 +72,10 @@ async function setSessionCookie(
     ...getSessionCookieOptions(ctx.req),
     maxAge: maxAgeMs,
   });
+}
+
+function isDemoUser(user: { loginMethod: string | null }) {
+  return user.loginMethod === DEMO_LOGIN_METHOD;
 }
 
 // ─── Projects Router ──────────────────────────────────────────────────────────
@@ -132,9 +142,15 @@ const projectsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      if (isDemoUser(ctx.user)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Inviting members is not available in demo mode",
+        });
+      }
       await assertProjectOwner(input.projectId, ctx.user.id);
       const invitee = await getUserByEmail(input.email.trim());
-      if (!invitee) {
+      if (!invitee || isDemoUser(invitee)) {
         throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
       }
       const members = await getProjectMembersList(input.projectId);
@@ -319,6 +335,29 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query(({ ctx }) => (ctx.user ? toPublicUser(ctx.user) : null)),
+
+    startDemo: publicProcedure
+      .input(
+        z.object({
+          locale: z.enum(["en", "pt-BR"]),
+          tzOffsetMinutes: z.number().int().min(-840).max(840),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await enforceRateLimit("demo", ctx.req);
+        try {
+          await cleanupExpiredDemos();
+        } catch (error) {
+          console.warn("[Demo] cleanup skipped:", String(error));
+        }
+        const { userId, projectId } = await withTimeout(
+          createDemoWorkspace(input),
+          8000,
+          "DEMO_CREATE"
+        );
+        await setSessionCookie(ctx, userId, DEMO_SESSION_MAX_AGE_MS);
+        return { success: true, projectId };
+      }),
 
     register: publicProcedure
       .input(
