@@ -116,3 +116,6 @@ data/
 *.db-shm
 *.db-wal
 
+# asdf version manager file
+.tool-versions
+
