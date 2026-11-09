@@ -82,7 +82,8 @@
         "title": "Painel",
         "desc": "Veja todas as suas métricas de uma vez"
       }
-    }
+    },
+    "screenshotAlt": "Quadro Kanban do TaskFlow com tarefas em A Fazer, Em Andamento e Concluído"
   },
   "dashboard": {
     "title": "Painel",

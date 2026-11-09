@@ -7,7 +7,7 @@ import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 
 export default function Home() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { user, loading } = useAuth();
   const [, navigate] = useLocation();
 
@@ -59,7 +59,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-8">
+      <main className="flex-1 flex flex-col items-center px-6 py-16 sm:py-20 text-center gap-10">
         <div className="space-y-4 max-w-2xl">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
             <Kanban className="h-4 w-4" />
@@ -89,7 +89,26 @@ export default function Home() {
           <p className="text-xs text-muted-foreground">{t("demo.ctaHint")}</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl w-full mt-8">
+        <figure className="relative w-full max-w-5xl">
+          <div
+            aria-hidden
+            className="absolute inset-x-8 -top-6 bottom-6 rounded-full bg-primary/25 blur-3xl"
+          />
+          <img
+            src={
+              i18n.resolvedLanguage === "pt-BR"
+                ? "/screenshots/board-pt-BR.webp"
+                : "/screenshots/board-en.webp"
+            }
+            alt={t("home.screenshotAlt")}
+            width={1920}
+            height={1200}
+            fetchPriority="high"
+            className="relative w-full h-auto rounded-xl border border-border shadow-2xl shadow-black/40"
+          />
+        </figure>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl w-full">
           {features.map((f) => (
             <div
               key={f.title}

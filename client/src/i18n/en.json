@@ -82,7 +82,8 @@
         "title": "Dashboard",
         "desc": "See all your metrics at a glance"
       }
-    }
+    },
+    "screenshotAlt": "TaskFlow Kanban board with tasks in To Do, In Progress and Done"
   },
   "dashboard": {
     "title": "Dashboard",
