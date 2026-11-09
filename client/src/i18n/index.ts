@@ -15,7 +15,9 @@ i18n
     fallbackLng: "en",
     supportedLngs: ["en", "pt-BR"],
     detection: {
-      order: ["localStorage", "navigator", "htmlTag"],
+      // `?lng=pt-BR` lets shared links (e.g. /demo?lng=pt-BR) pick the language.
+      order: ["querystring", "localStorage", "navigator", "htmlTag"],
+      lookupQuerystring: "lng",
       caches: ["localStorage"],
       lookupLocalStorage: "taskflow-lang",
     },
@@ -23,5 +25,11 @@ i18n
       escapeValue: false,
     },
   });
+
+const syncHtmlLang = (lng: string) => {
+  document.documentElement.lang = lng;
+};
+syncHtmlLang(i18n.resolvedLanguage ?? "en");
+i18n.on("languageChanged", syncHtmlLang);
 
 export default i18n;
