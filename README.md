@@ -2,7 +2,7 @@
 
 A clean, focused Kanban task management app built with React, tRPC and Turso (libSQL).
 
-**[Try the live demo](taskflow-board.a-barros.uk/demo)**: no sign-up, you land on a ready-made board in a few seconds ([versão em português](taskflow-board.a-barros.uk/demo?lng=pt-BR)).
+**[Try the live demo](https://taskflow-board.a-barros.uk/demo)**: no sign-up, you land on a ready-made board in a few seconds ([versão em português](https://taskflow-board.a-barros.uk/demo?lng=pt-BR)).
 
 ![TaskFlow Kanban board](docs/screenshot-board.png)
 
