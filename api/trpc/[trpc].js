@@ -2,7 +2,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import express from "express";
-import serverless from "serverless-http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
 // server/routers.ts
@@ -49,9 +48,7 @@ var tracingMiddleware = t.middleware(async (opts) => {
   const locals = opts.ctx.res?.locals;
   const requestId = locals?.requestId ?? "n/a";
   const path = opts.path ?? "unknown";
-  console.log(
-    `[TRPC] -> id=${requestId} type=${opts.type} path=${path}`
-  );
+  console.log(`[TRPC] -> id=${requestId} type=${opts.type} path=${path}`);
   try {
     const result = await opts.next();
     console.log(
@@ -1387,7 +1384,7 @@ var trpcMiddleware = createExpressMiddleware({
   createContext
 });
 app.use("/", trpcMiddleware);
-var index_default = serverless(app);
+var index_default = app;
 export {
   index_default as default
 };

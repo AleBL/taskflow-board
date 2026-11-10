@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import express from "express";
-import serverless from "serverless-http";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../server/routers";
 import { createContext } from "../server/_core/context";
@@ -35,9 +34,7 @@ const requestLogger = (req: RequestLike, res: ResponseLike, next: NextFn) => {
   res.locals.requestId = requestId;
   res.setHeader("x-request-id", requestId);
 
-  console.log(
-    `[HTTP] -> id=${requestId} method=${req.method} url=${req.url}`
-  );
+  console.log(`[HTTP] -> id=${requestId} method=${req.method} url=${req.url}`);
 
   res.on("finish", () => {
     console.log(
@@ -80,4 +77,7 @@ const trpcMiddleware = createExpressMiddleware({
 
 app.use("/", trpcMiddleware);
 
-export default serverless(app);
+// Vercel's Node runtime calls the default export as `(req, res)`, which is
+// exactly an Express app's signature. serverless-http expects an AWS Lambda
+// `(event, context)` call instead, so with it every request hung until timeout.
+export default app;
